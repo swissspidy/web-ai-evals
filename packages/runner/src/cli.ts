@@ -4,6 +4,7 @@ import { diffRuns, renderDiff, renderDiffMarkdown, renderMarkdown, renderReport 
 import { readFile, writeFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 import { loadConfig } from './config.js';
+import { builtInDiagnostics } from './diagnostics.js';
 import { runNightly } from './nightly.js';
 import { rescoreRun, runEvals } from './run.js';
 import { startRuntimeServer } from './server.js';
@@ -102,6 +103,14 @@ async function main(argv: string[]): Promise<number> {
             console.log(`  WebGPU:   ${env.gpu ? [env.gpu.vendor, env.gpu.architecture, env.gpu.description].filter(Boolean).join(' / ') + (env.gpu.isFallbackAdapter ? ' (fallback)' : '') : 'no adapter'}`);
             console.log(`  built-in: ${Object.entries(env.builtInApis).map(([k, v]) => `${k}${v ? '' : ' ✖'}`).join(', ')}`);
             console.log(`  isolated: ${env.crossOriginIsolated}`);
+            if (browser.channel !== 'chromium' && env.builtInApis.LanguageModel) {
+              const diag = await builtInDiagnostics(session.browser.context);
+              if (diag) {
+                console.log(`  on-device model: performance class ${diag.performanceClass ?? '?'}`);
+                for (const b of diag.blockers) console.log(`    ✖ ${b}`);
+                for (const a of diag.assets) console.log(`    · ${a}`);
+              }
+            }
             for (const suite of config.suites) {
               for (const spec of config.backends.filter((b) => (!suite.backends || suite.backends.includes(b.id)) && (!b.browsers || b.browsers.includes(browser.id)))) {
                 const a = await session.availability(spec, suite.task);

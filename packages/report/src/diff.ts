@@ -49,6 +49,8 @@ export interface RunDiff {
 export interface DiffOptions {
   /** Absolute score change that counts as a change. Default 0.05. */
   scoreThreshold?: number;
+  /** Relative change that counts for metrics outside 0..1 (counts, lengths). Default 0.2. */
+  relativeThreshold?: number;
   /** Latency ratio (after/before or before/after) that counts as a change. Default 1.5. */
   latencyRatio?: number;
   /** Compare a browser in the "before" run with a different browser in "after" (e.g. chrome vs chrome-canary). */
@@ -78,6 +80,7 @@ function cellKey(c: CellResult, includeBrowser: boolean): string {
 export function diffRuns(before: RunFile, after: RunFile, options: DiffOptions = {}): RunDiff {
   const scoreThreshold = options.scoreThreshold ?? 0.05;
   const latencyRatio = options.latencyRatio ?? 1.5;
+  const relativeThreshold = options.relativeThreshold ?? 0.2;
   const flagFields = options.flagFields ?? DEFAULT_FLAG_FIELDS;
   const pick = (run: RunFile, browser?: string) => run.cells.filter((c) => !browser || c.environment.browser.id === browser);
   const cross = !!options.browsers;
@@ -88,7 +91,7 @@ export function diffRuns(before: RunFile, after: RunFile, options: DiffOptions =
   for (const [key, cb] of a) {
     const ca = b.get(key);
     if (!ca) continue;
-    cells.push(diffCell(cross ? `${key} (${options.browsers!.before} → ${options.browsers!.after})` : key, cb, ca, scoreThreshold, latencyRatio, flagFields));
+    cells.push(diffCell(cross ? `${key} (${options.browsers!.before} → ${options.browsers!.after})` : key, cb, ca, scoreThreshold, relativeThreshold, latencyRatio, flagFields));
   }
   const flags = cells.flatMap((c) => c.flags.map((f) => `${c.key}: ${f}`));
   return {
@@ -101,7 +104,15 @@ export function diffRuns(before: RunFile, after: RunFile, options: DiffOptions =
   };
 }
 
-function diffCell(key: string, before: CellResult, after: CellResult, scoreThreshold: number, latencyRatio: number, flagFields: string[]): CellDiff {
+function diffCell(
+  key: string,
+  before: CellResult,
+  after: CellResult,
+  scoreThreshold: number,
+  relativeThreshold: number,
+  latencyRatio: number,
+  flagFields: string[],
+): CellDiff {
   const flags: string[] = [];
   const envChanges: FieldChange[] = [];
   for (const [field, get] of ENV_FIELDS) {
@@ -120,7 +131,10 @@ function diffCell(key: string, before: CellResult, after: CellResult, scoreThres
     const y = after.summary.scores[metric] ?? after.summary.aggregates[metric];
     if (x === undefined || y === undefined || metric.includes('.f1:')) continue;
     const delta = y - x;
-    const flagged = Math.abs(delta) >= scoreThreshold;
+    // Scores in 0..1 use the absolute threshold; counts and other unbounded metrics
+    // (e.g. words per output) use a relative one.
+    const bounded = x >= 0 && x <= 1 && y >= 0 && y <= 1;
+    const flagged = bounded ? Math.abs(delta) >= scoreThreshold : Math.abs(delta) / Math.max(Math.abs(x), 1e-9) >= relativeThreshold;
     scores.push({ metric, before: x, after: y, delta, flagged });
     if (flagged) flags.push(`${metric} ${delta > 0 ? 'improved' : 'regressed'}: ${x.toFixed(3)} → ${y.toFixed(3)}`);
   }

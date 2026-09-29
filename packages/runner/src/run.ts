@@ -132,6 +132,9 @@ export async function runEvals(config: ResolvedConfig, options: RunEvalsOptions 
         run.notes = [...(run.notes ?? []), `browser ${browser.id} failed to launch: ${(err as Error).message.split('\n')[0]}`];
         continue;
       }
+      // A backend that failed to load (timeout or error) in this browser is not retried for
+      // every suite: later cells reuse the failure instead of waiting out the load timeout again.
+      const failedLoads = new Map<string, LoadReport>();
       try {
         for (const loaded of suites) {
           for (const spec of backendsFor(config, loaded.suite, filter).filter((b) => !b.browsers || b.browsers.includes(browser.id))) {
@@ -139,7 +142,10 @@ export async function runEvals(config: ResolvedConfig, options: RunEvalsOptions 
             let cell: CellResult | undefined;
             for (let attempt = 1; ; attempt++) {
               try {
-                cell = await runCell(session, config, loaded, spec, log);
+                cell = await runCell(session, config, loaded, spec, log, failedLoads.get(spec.id));
+                if (cell && (cell.load.status === 'timeout' || cell.load.status === 'error') && !failedLoads.has(spec.id)) {
+                  failedLoads.set(spec.id, cell.load);
+                }
               } catch (err) {
                 cell = undefined;
                 log(`cell failed: ${(err as Error).message.split('\n')[0]}`);
@@ -174,6 +180,7 @@ export async function runCell(
   loaded: LoadedSuite,
   spec: BackendSpec,
   log: (msg: string) => void,
+  previousFailure?: LoadReport,
 ): Promise<CellResult | undefined> {
   const { suite, examples, byId } = loaded;
   const task = suite.task;
@@ -187,7 +194,9 @@ export async function runCell(
   log(`▶ ${key}: ${examples.length} examples`);
   const opts = config.run;
 
-  const load: LoadReport = await session.load(spec, task, { timeoutMs: opts.loadTimeoutMs });
+  const load: LoadReport = previousFailure
+    ? { ...previousFailure, error: `${previousFailure.error ?? previousFailure.status} (from an earlier load in this browser)` }
+    : await session.load(spec, task, { timeoutMs: opts.loadTimeoutMs });
   let results: ExampleResult[];
   if (load.status !== 'ok') {
     results = placeholderResults(examples, load.status === 'unavailable' ? 'unavailable' : 'error', load.error);

@@ -27,7 +27,10 @@ export function renderDiffMarkdown(diff: RunDiff): string {
   for (const c of diff.cells) {
     const changed = c.scores.filter((s) => s.delta !== 0);
     if (!c.flags.length && !changed.length) continue;
-    lines.push(`### ${c.key}`, '', ...c.scores.map((s) => `- ${s.metric}: ${score(s.before)} → ${score(s.after)} (${signed(s.delta)})`), `- outputs changed: ${c.changedOutputs.length}/${c.after.summary.total}`, '');
+    const b = c.before.environment;
+    const a = c.after.environment;
+    lines.push(`### ${c.key}`, '',
+      `- browser: ${b.browser.version} → ${a.browser.version}; model: ${b.backend.model ?? '?'} ${b.backend.modelVersion ?? ''} → ${a.backend.model ?? '?'} ${a.backend.modelVersion ?? ''}`, ...c.scores.map((s) => `- ${s.metric}: ${score(s.before)} → ${score(s.after)} (${signed(s.delta)})`), `- outputs changed: ${c.changedOutputs.length}/${c.after.summary.total}`, '');
   }
   return lines.join('\n');
 }

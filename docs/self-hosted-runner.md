@@ -71,6 +71,18 @@ is coming to Stable.
 A failed nightly job isn't a bug in itself. It tells you to look at the diff
 page.
 
+## Disk space
+
+Chrome only installs Gemini Nano when the profile's volume has **at least 20 GB
+free** (`chrome://on-device-internals` → *Enough disk space to install*).
+Each profile holds its own copy of the model, about 4 GB. Three channels need
+about 12 GB for the models, plus the 20 GB of headroom at install time.
+
+When there isn't enough space, `LanguageModel.availability()` still says
+`downloadable` and `create()` waits forever. The runner detects the stall and
+gives up. `web-ai-evals doctor` prints Chrome's own install criteria, so the
+reason is visible.
+
 ## Noise
 
 Chrome doesn't let web pages set the Prompt API's temperature. Outputs vary

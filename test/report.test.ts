@@ -91,3 +91,16 @@ describe('latestRun', () => {
     expect((await latestRun(dir, 'x'))?.run.runId).toBe('other');
   });
 });
+
+describe('diff thresholds', () => {
+  it('uses a relative threshold for unbounded metrics like word counts', () => {
+    const withWords = (words: number) => {
+      const c = cell('chrome', '154', 'v1', 1, 100);
+      c.summary.scores.words = words;
+      c.scorers.push('words');
+      return c;
+    };
+    expect(diffRuns(run('a', [withWords(41)]), run('b', [withWords(42.3)])).flags).toEqual([]);
+    expect(diffRuns(run('a', [withWords(40)]), run('b', [withWords(60)])).flags.join()).toContain('words improved');
+  });
+});
