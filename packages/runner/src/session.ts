@@ -13,7 +13,7 @@ import type {
 import type { Page } from 'playwright';
 import { launchBrowser, type LaunchedBrowser } from './browsers.js';
 import type { BrowserConfig } from './config.js';
-import { builtInModelVersions, hostInfo } from './host.js';
+import { builtInModelVersions, dirBytes, hostInfo } from './host.js';
 import { startRuntimeServer, type RuntimeServer } from './server.js';
 
 export interface SessionOptions {
@@ -28,6 +28,8 @@ export interface SessionOptions {
 
 export interface LoadOptions {
   timeoutMs?: number;
+  /** Retry the load when no progress event arrives for this long. Default 5 min. */
+  stallMs?: number;
   onProgress?: (event: ProgressEvent) => void;
 }
 
@@ -136,16 +138,49 @@ export class BrowserSession {
       }
     };
     this.log(`loading ${spec.id} (availability: ${availabilityBefore.availability})`);
-    await this.page.evaluate(([s, t]) => window.__wae.armLoad(s, t), [spec, task] as const);
-    await this.page.click('#wae-activate');
     const timeoutMs = options.timeoutMs ?? 60 * 60_000;
-    let timer: NodeJS.Timeout | undefined;
-    const report = await Promise.race([
-      this.page.evaluate(() => window.__wae.awaitLoad()),
-      new Promise<PageLoadReport>((resolve) => {
-        timer = setTimeout(() => resolve({ status: 'timeout', error: `load timed out after ${timeoutMs} ms` }), timeoutMs);
-      }),
-    ]).finally(() => clearTimeout(timer));
+    const stallMs = options.stallMs ?? 5 * 60_000;
+    const deadline = Date.now() + timeoutMs;
+    let report: PageLoadReport;
+    for (let attempt = 1; ; attempt++) {
+      let lastProgress = Date.now();
+      const inner: ((e: ProgressEvent) => void) | undefined = this.progressHandler;
+      this.progressHandler = (e) => {
+        lastProgress = Date.now();
+        inner?.(e);
+      };
+      await this.page.evaluate(([s, t]) => window.__wae.armLoad(s, t), [spec, task] as const);
+      await this.page.click('#wae-activate');
+      let timer: NodeJS.Timeout | undefined;
+      report = await Promise.race([
+        this.page.evaluate(() => window.__wae.awaitLoad()),
+        new Promise<PageLoadReport>((resolve) => {
+          let lastBytes = -1;
+          let lastDiskCheck = 0;
+          const check = async () => {
+            // Built-in AI only reports progress at 0 and 1, so growth of the profile on disk
+            // counts as progress while a model component downloads.
+            if (BUILT_IN_KINDS.has(spec.kind) && Date.now() - lastDiskCheck > 30_000) {
+              lastDiskCheck = Date.now();
+              const bytes = await dirBytes(this.browser.profileDir);
+              if (lastBytes >= 0 && bytes !== lastBytes) lastProgress = Date.now();
+              lastBytes = bytes;
+            }
+            if (Date.now() > deadline) return resolve({ status: 'timeout', error: `load timed out after ${timeoutMs} ms` });
+            // A create() call issued before the browser has fetched its model manifest can hang
+            // without progress events; reloading the page and calling it again recovers.
+            if (Date.now() - lastProgress > stallMs) return resolve({ status: 'timeout', error: `no load progress for ${stallMs} ms` });
+            timer = setTimeout(() => void check(), 1000);
+          };
+          timer = setTimeout(() => void check(), 1000);
+        }),
+      ]).finally(() => clearTimeout(timer));
+      this.progressHandler = inner;
+      if (report.status !== 'timeout' || Date.now() > deadline || attempt >= 3) break;
+      this.log(`${spec.id}: ${report.error}; reloading the page and retrying (attempt ${attempt + 1})`);
+      this.current = undefined;
+      await this.resetPage();
+    }
     this.progressHandler = undefined;
     this.current = report.status === 'ok' ? { spec, task } : undefined;
     this.log(`${spec.id}: load ${report.status}${report.loadMs ? ` in ${(report.loadMs / 1000).toFixed(1)} s` : ''}${report.error ? ` (${report.error})` : ''}`);

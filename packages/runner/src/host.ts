@@ -1,4 +1,4 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -71,4 +71,21 @@ async function latestVersionDir(dir: string): Promise<string | undefined> {
     return 0;
   });
   return versions.at(-1);
+}
+
+/** Total size of the model-related folders of a profile (download activity signal). */
+export async function dirBytes(profileDir: string): Promise<number> {
+  let total = 0;
+  const walk = async (dir: string, depth: number): Promise<void> => {
+    const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+    for (const e of entries) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory() && depth < 4) await walk(p, depth + 1);
+      else if (e.isFile()) total += (await stat(p).catch(() => ({ size: 0 }))).size;
+    }
+  };
+  for (const d of ['OptGuideOnDeviceModel', 'component_crx_cache', 'TranslateKit', 'optimization_guide_model_store']) {
+    await walk(path.join(profileDir, d), 0);
+  }
+  return total;
 }
