@@ -56,6 +56,9 @@ export default defineConfig({
     },
     // Chrome's task APIs, on the suites they support (others are skipped).
     { id: 'chrome-summarizer', kind: 'summarizer', browsers: ['chrome'] },
+    // tl;dr mode (the suite default) returned long Markdown articles on Chrome 154's CPU
+    // backend; key-points mode is measured separately.
+    { id: 'chrome-summarizer-keypoints', kind: 'summarizer', options: { create: { type: 'key-points' } }, browsers: ['chrome'] },
     { id: 'chrome-translator', kind: 'translator', browsers: ['chrome'] },
   ],
   suites: allSuites.map((s) => ({ ...s, limit: process.env.WAE_LIMIT ? Number(process.env.WAE_LIMIT) : undefined })),

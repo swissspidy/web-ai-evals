@@ -69,6 +69,18 @@ export interface RunEvalsOptions {
   log?: (msg: string) => void;
   /** Called after each cell with the partial run file (already written to disk). */
   onCell?: (cell: CellResult, run: RunFile) => void;
+  /**
+   * Continue an interrupted run: keep its cells (except ones damaged by a browser
+   * crash) and only run the missing ones. Results go to the same file.
+   */
+  resume?: { run: RunFile; file: string };
+}
+
+const BROWSER_GONE = /Target page, context or browser has been closed|Browser has been closed|browser has disconnected/i;
+
+/** A cell from an interrupted run is reusable unless the browser died under it. */
+function reusable(cell: CellResult): boolean {
+  return !cell.results.some((r) => BROWSER_GONE.test(r.error ?? '')) && !BROWSER_GONE.test(cell.load.error ?? '');
 }
 
 /** Run a resolved config. Writes `<outDir>/<runId>.json` after every cell. */
@@ -84,7 +96,9 @@ export async function runEvals(config: ResolvedConfig, options: RunEvalsOptions 
 
   const startedAt = new Date();
   const runId = `${startedAt.toISOString().replace(/[:.]/g, '-').slice(0, 19)}-${randomUUID().slice(0, 6)}`;
-  const run: RunFile = {
+  const run: RunFile = options.resume
+    ? { ...options.resume.run, cells: options.resume.run.cells.filter(reusable) }
+    : {
     schemaVersion: SCHEMA_VERSION,
     runId,
     name: config.name,
@@ -95,8 +109,10 @@ export async function runEvals(config: ResolvedConfig, options: RunEvalsOptions 
     cells: [],
     notes: config.notes,
   };
+  const done = new Set(run.cells.map((c) => c.key));
+  if (options.resume) log(`resuming ${run.runId}: ${done.size} cells kept`);
   await mkdir(config.run.outDir, { recursive: true });
-  const file = path.join(config.run.outDir, `${runId}.json`);
+  const file = options.resume?.file ?? path.join(config.run.outDir, `${runId}.json`);
   const save = async () => {
     run.finishedAt = new Date().toISOString();
     await writeFile(file, JSON.stringify(run, null, 2));
@@ -106,10 +122,11 @@ export async function runEvals(config: ResolvedConfig, options: RunEvalsOptions 
   try {
     // One browser at a time, one backend at a time: no GPU contention between measurements.
     for (const browser of browsers) {
+      const open = () => BrowserSession.open({ browser, profilesDir: config.run.profilesDir, serverUrl: server.url, log });
       log(`launching ${browser.id} (${browser.channel}${browser.headless ? ', headless' : ''})`);
       let session: BrowserSession;
       try {
-        session = await BrowserSession.open({ browser, profilesDir: config.run.profilesDir, serverUrl: server.url, log });
+        session = await open();
       } catch (err) {
         log(`could not launch ${browser.id}: ${(err as Error).message.split('\n')[0]}`);
         run.notes = [...(run.notes ?? []), `browser ${browser.id} failed to launch: ${(err as Error).message.split('\n')[0]}`];
@@ -118,7 +135,22 @@ export async function runEvals(config: ResolvedConfig, options: RunEvalsOptions 
       try {
         for (const loaded of suites) {
           for (const spec of backendsFor(config, loaded.suite, filter).filter((b) => !b.browsers || b.browsers.includes(browser.id))) {
-            const cell = await runCell(session, config, loaded, spec, log);
+            if (done.has(`${loaded.suite.id}/${spec.id}/${browser.id}`)) continue;
+            let cell: CellResult | undefined;
+            for (let attempt = 1; ; attempt++) {
+              try {
+                cell = await runCell(session, config, loaded, spec, log);
+              } catch (err) {
+                cell = undefined;
+                log(`cell failed: ${(err as Error).message.split('\n')[0]}`);
+              }
+              // If the browser died under the cell, relaunch it and run the cell again once.
+              const crashed = !session.alive || (cell !== undefined && !reusable(cell));
+              if (!crashed || attempt > 1) break;
+              log(`${browser.id} crashed, relaunching`);
+              await session.close();
+              session = await open();
+            }
             if (!cell) continue;
             run.cells.push(cell);
             await save();

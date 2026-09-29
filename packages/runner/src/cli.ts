@@ -13,6 +13,7 @@ const HELP = `web-ai-evals — run and compare LLM evals inside real browsers
 
 Usage:
   web-ai-evals run --config evals.config.ts [--browsers a,b] [--backends a,b] [--suites a,b] [--limit N] [--no-report]
+                    [--resume results/<runId>.json]
   web-ai-evals doctor --config evals.config.ts [--browsers a,b]
   web-ai-evals report <run.json...> [--out report.html] [--title T] [--markdown]
   web-ai-evals diff <before.json> [after.json] [--browsers before:after] [--out diff.html]
@@ -55,6 +56,7 @@ async function main(argv: string[]): Promise<number> {
       'latency-ratio': { type: 'string' },
       port: { type: 'string' },
       history: { type: 'string' },
+      resume: { type: 'string' },
       help: { type: 'boolean', short: 'h' },
     },
   });
@@ -66,7 +68,9 @@ async function main(argv: string[]): Promise<number> {
   switch (command) {
     case 'run': {
       const config = await loadConfig(values.config ?? 'evals.config.ts');
+      const resume = values.resume ? { run: await readRun(values.resume), file: values.resume } : undefined;
       const { run, file } = await runEvals(config, {
+        resume,
         filter: { browsers: list(values.browsers), backends: list(values.backends), suites: list(values.suites), limit: values.limit ? Number(values.limit) : undefined },
       });
       console.error(`results: ${file}`);

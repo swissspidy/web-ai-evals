@@ -76,6 +76,9 @@ export class BrowserSession {
       throw err;
     }
     const session = new BrowserSession(options, browser, url, server);
+    browser.context.on('close', () => {
+      session.closed = true;
+    });
     await browser.context.exposeBinding('__waeProgress', (_source, event: ProgressEvent) => session.progressHandler?.(event));
     await session.openPage();
     return session;
@@ -231,7 +234,16 @@ export class BrowserSession {
     };
   }
 
+  /** False once the browser process is gone. */
+  get alive(): boolean {
+    const b = this.browser.context.browser();
+    return b ? b.isConnected() : !this.closed;
+  }
+
+  private closed = false;
+
   async close(): Promise<void> {
+    this.closed = true;
     await this.browser.context.close().catch(() => {});
     await this.server?.close();
   }
