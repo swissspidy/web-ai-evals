@@ -81,8 +81,14 @@ export class BrowserSession {
     browser.context.on('close', () => {
       session.closed = true;
     });
-    await browser.context.exposeBinding('__waeProgress', (_source, event: ProgressEvent) => session.progressHandler?.(event));
-    await session.openPage();
+    try {
+      await browser.context.exposeBinding('__waeProgress', (_source, event: ProgressEvent) => session.progressHandler?.(event));
+      await session.openPage();
+    } catch (err) {
+      // Don't leave a browser holding the profile lock (or the server) behind.
+      await session.close();
+      throw err;
+    }
     return session;
   }
 

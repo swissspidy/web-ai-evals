@@ -27,10 +27,33 @@ const SUITES = {
   translation: { title: 'Translation EN → DE', metric: 'chrF', metricLabel: 'chrF', blurb: '20 everyday English sentences against a German reference translation.' },
 };
 
-const env = cells.find((c) => c.load.status === 'ok')?.environment;
-const nano = cells.find((c) => c.backend.id === 'gemini-nano' && c.load.status === 'ok')?.environment.backend;
-const comps = nano?.details?.builtInComponents ?? {};
 const run = runs[0];
+const num = (v) => (Number.isFinite(Number(v)) ? String(Number(v)) : '?');
+const GPU_BACKENDS = ['phi-4-mini', 'gemma3-1b-webllm', 'gemma3-1b-tjs-webgpu'];
+const gpuMeasured = cells.some((c) => GPU_BACKENDS.includes(c.backend.id) && c.load.status === 'ok');
+
+/** One line per machine, from any cell of that run (loaded or not). */
+function machineLine(r) {
+  const cell = r.cells.find((c) => c.load.status === 'ok') ?? r.cells[0];
+  if (!cell) return '';
+  const e = cell.environment;
+  const gpu = r.cells.map((c) => c.environment.gpu).find(Boolean);
+  const nano = r.cells.find((c) => c.backend.kind === 'prompt-api' && c.load.status === 'ok')?.environment.backend;
+  const comps = nano?.details?.builtInComponents ?? {};
+  const parts = [
+    `${esc(e.browser.name)} ${esc(e.browser.version)} (${esc(e.browser.channel ?? '')}, ${e.browser.headless ? 'headless' : 'headful'})`,
+    `${esc(e.os.platform)} ${esc(e.os.arch)}`,
+    `${esc(e.hardware.cpuModel ?? r.host.cpuModel ?? '')} · ${num(e.hardware.cores)} cores · ${num(Math.round((e.hardware.memoryBytes ?? r.host.memoryBytes) / 2 ** 30))} GiB`,
+    gpu ? `GPU ${esc([gpu.vendor, gpu.architecture, gpu.description].filter(Boolean).join(' '))}` : 'no GPU, no WebGPU adapter',
+  ];
+  if (nano) parts.push(`${esc(nano.model ?? 'built-in model')} ${esc(comps.baseModelVersion ?? nano.modelVersion ?? '')}${comps.onDeviceModel ? ` · asset ${esc(comps.onDeviceModel)}` : ''}`);
+  return `<div class="machine">${parts.map((p) => `<span>${p}</span>`).join('')}</div>`;
+}
+
+if (!cells.some((c) => c.load.status === 'ok')) {
+  process.stdout.write(`<title>Built-in AI vs In-Page Models</title><main style="max-width:680px;margin:0 auto;padding:40px 16px;font:16px/1.5 system-ui,sans-serif"><h1>No results</h1><p>No backend loaded in ${runs.length} run(s): ${esc(cells.map((c) => `${c.backend.id}: ${c.load.error ?? c.load.status}`).slice(0, 12).join('; '))}</p></main>`);
+  process.exit(0);
+}
 
 function bars(rows, value, max, fmt, cls) {
   return rows
@@ -65,7 +88,7 @@ function suiteSection(id) {
     .map((c) => {
       const s = c.summary;
       const extra = id === 'summarization' ? `${s.scores.words?.toFixed(0)} words` : id === 'extraction' ? `${(s.scores.jsonSchema * 100).toFixed(0)}% schema-valid` : id === 'sentiment' ? `macro-F1 ${s.aggregates['accuracy.macroF1']?.toFixed(3)}` : `${(s.scores.exact * 100).toFixed(0)}% contain the reference`;
-      return `<tr><td>${esc(NAMES[c.backend.id]?.[0] ?? c.backend.id)} <small>${esc(NAMES[c.backend.id]?.[1] ?? '')}</small></td><td class="n">${s.scores[meta.metric].toFixed(3)}</td><td class="n">${esc(extra)}</td><td class="n">${sec(s.ttftMs?.p50)}</td><td class="n">${sec(lat(c))}</td><td class="n">${s.tokensPerSecond ? s.tokensPerSecond.p50.toFixed(1) : '—'}</td><td class="n">${s.ok}/${s.total}</td></tr>`;
+      return `<tr><td>${esc(NAMES[c.backend.id]?.[0] ?? c.backend.id)} <small>${esc(NAMES[c.backend.id]?.[1] ?? '')}</small></td><td class="n">${s.scores[meta.metric].toFixed(3)}</td><td class="n">${esc(extra)}</td><td class="n">${sec(s.ttftMs?.p50)}</td><td class="n">${sec(lat(c))}</td><td class="n">${s.tokensPerSecond ? s.tokensPerSecond.p50.toFixed(1) : '—'}</td><td class="n">${num(s.ok)}/${num(s.total)}</td></tr>`;
     })
     .join('');
   return `<section class="suite" id="${id}">
@@ -160,14 +183,8 @@ pre { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6p
 <div class="intro">
   <span class="eyebrow">web-ai-evals · first report · ${esc(run.startedAt.slice(0, 10))}</span>
   <h1>Built-in AI vs in-page models, same prompts, same browser</h1>
-  <p>Four task suites run through Chrome's built-in Gemini Nano, Chrome's Summarizer and Translator APIs, and a Transformers.js model, all inside a real Chrome tab driven by Playwright. Every number below comes from one run on a CPU-only machine; the GPU backends from the comparison plan (Phi-4-mini in Edge, Gemma 3 via WebLLM and Transformers.js WebGPU) could not run there and are listed as not measured.</p>
-  <div class="machine">
-    <span>${esc(env.browser.name)} ${esc(env.browser.version)} (stable, headful)</span>
-    <span>${esc(env.os.platform)} ${esc(env.os.arch)}</span>
-    <span>${esc(env.hardware.cpuModel)} · ${env.hardware.cores} cores · ${(env.hardware.memoryBytes / 2 ** 30).toFixed(0)} GiB</span>
-    <span>no GPU, no WebGPU adapter</span>
-    <span>Gemini Nano ${esc(comps.baseModel)} ${esc(comps.baseModelVersion)} · CPU asset ${esc(comps.onDeviceModel)}</span>
-  </div>
+  <p>Four task suites run through Chrome's built-in Gemini Nano, Chrome's Summarizer and Translator APIs, and a Transformers.js model, all inside a real Chrome tab driven by Playwright. Every number below comes from ${runs.length === 1 ? 'one run' : `${runs.length} runs`} on the machine${runs.length === 1 ? '' : 's'} listed here.${gpuMeasured ? '' : ' The GPU backends from the comparison plan (Phi-4-mini in Edge, Gemma 3 via WebLLM and Transformers.js WebGPU) could not run there and are listed as not measured.'}</p>
+  ${runs.map(machineLine).join('\n  ')}
 </div>
 
 <ol class="findings">
@@ -199,7 +216,7 @@ pnpm wae report results/cpu.json results/gpu.json</pre>
   </div>
   <div>
     <h2>Data and code</h2>
-    <p>Datasets were written for this project and are CC0. Code is Apache-2.0. Run file: <span class="mono">${esc(run.runId)}</span>, schema version ${run.schemaVersion}.</p>
+    <p>Datasets were written for this project and are CC0. Code is Apache-2.0. Run file${runs.length > 1 ? 's' : ''}: <span class="mono">${runs.map((r) => esc(r.runId)).join(', ')}</span>, schema version ${esc(num(run.schemaVersion))}.</p>
   </div>
 </div>
 </main>`;

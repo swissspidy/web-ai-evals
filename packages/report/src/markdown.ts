@@ -2,6 +2,9 @@ import type { RunFile } from '@web-ai-evals/core';
 import type { RunDiff } from './diff.js';
 import { cellStatus, ms, modelLabel, num, score, signed } from './format.js';
 
+/** Escape a value for a Markdown table cell. */
+const cell = (v: unknown) => String(v ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+
 /** Compact Markdown summary, e.g. for $GITHUB_STEP_SUMMARY. */
 export function renderMarkdown(runs: RunFile[]): string {
   const cells = runs.flatMap((r) => r.cells);
@@ -9,10 +12,10 @@ export function renderMarkdown(runs: RunFile[]): string {
   for (const id of [...new Set(cells.map((c) => c.dataset.id))]) {
     const dc = cells.filter((c) => c.dataset.id === id);
     const primary = dc[0].scorers[0];
-    lines.push(`## ${id}`, '', `| Backend | Model | Browser | Status | ${primary} | TTFT p50 | Latency p50 | Tokens/s p50 |`, '|---|---|---|---|---:|---:|---:|---:|');
+    lines.push(`## ${id}`, '', `| Backend | Model | Browser | Status | ${cell(primary)} | TTFT p50 | Latency p50 | Tokens/s p50 |`, '|---|---|---|---|---:|---:|---:|---:|');
     for (const c of dc) {
       lines.push(
-        `| ${c.backend.id} | ${modelLabel(c)} | ${c.environment.browser.id} ${c.environment.browser.version} | ${cellStatus(c).label} | ${score(c.summary.scores[primary])} | ${ms(c.summary.ttftMs?.p50)} | ${ms(c.summary.warm?.totalMs?.p50 ?? c.summary.totalMs?.p50)} | ${num(c.summary.tokensPerSecond?.p50)} |`,
+        `| ${cell(c.backend.id)} | ${cell(modelLabel(c))} | ${cell(`${c.environment.browser.id} ${c.environment.browser.version}`)} | ${cell(cellStatus(c).label)} | ${score(c.summary.scores[primary])} | ${ms(c.summary.ttftMs?.p50)} | ${ms(c.summary.warm?.totalMs?.p50 ?? c.summary.totalMs?.p50)} | ${num(c.summary.tokensPerSecond?.p50)} |`,
       );
     }
     lines.push('');

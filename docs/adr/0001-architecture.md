@@ -149,9 +149,11 @@ truth):
 interface RunFile {
   schemaVersion: 1;
   runId: string; startedAt: string; finishedAt: string;
+  name?: string;               // config name
   tool: { name: '@web-ai-evals/runner'; version: string };
-  config: { name?: string; datasets: DatasetRef[]; };
+  host: { platform; release; arch; cpuModel?; cores; memoryBytes };
   cells: CellResult[];         // one per dataset × backend × browser
+  notes?: string[];
 }
 
 interface CellResult {

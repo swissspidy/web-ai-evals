@@ -27,7 +27,13 @@ export interface RuntimeServer {
 export async function startRuntimeServer(port: number, root = pageRuntimeDir): Promise<RuntimeServer> {
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
-    let rel = decodeURIComponent(url.pathname);
+    let rel: string;
+    try {
+      rel = decodeURIComponent(url.pathname);
+    } catch {
+      res.writeHead(400).end();
+      return;
+    }
     if (rel.endsWith('/')) rel += 'index.html';
     const file = path.join(root, path.normalize(rel).replace(/^([/\\])+/, ''));
     if (!file.startsWith(root)) {

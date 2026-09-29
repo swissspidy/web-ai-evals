@@ -68,14 +68,8 @@ pre { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6p
 <div class="intro">
   <span class="eyebrow">web-ai-evals · first report · 2026-09-29</span>
   <h1>Built-in AI vs in-page models, same prompts, same browser</h1>
-  <p>Four task suites run through Chrome's built-in Gemini Nano, Chrome's Summarizer and Translator APIs, and a Transformers.js model, all inside a real Chrome tab driven by Playwright. Every number below comes from one run on a CPU-only machine; the GPU backends from the comparison plan (Phi-4-mini in Edge, Gemma 3 via WebLLM and Transformers.js WebGPU) could not run there and are listed as not measured.</p>
-  <div class="machine">
-    <span>Google Chrome 154.0.8037.57 (stable, headful)</span>
-    <span>linux x64</span>
-    <span>Intel(R) Xeon(R) Processor @ 2.10GHz · 4 cores · 16 GiB</span>
-    <span>no GPU, no WebGPU adapter</span>
-    <span>Gemini Nano v3Nano 2025.08.14.1358 · CPU asset 2025.8.21.1028</span>
-  </div>
+  <p>Four task suites run through Chrome's built-in Gemini Nano, Chrome's Summarizer and Translator APIs, and a Transformers.js model, all inside a real Chrome tab driven by Playwright. Every number below comes from one run on the machine listed here. The GPU backends from the comparison plan (Phi-4-mini in Edge, Gemma 3 via WebLLM and Transformers.js WebGPU) could not run there and are listed as not measured.</p>
+  <div class="machine"><span>Google Chrome 154.0.8037.57 (chrome, headful)</span><span>linux x64</span><span>Intel(R) Xeon(R) Processor @ 2.10GHz · 4 cores · 16 GiB</span><span>no GPU, no WebGPU adapter</span><span>v3Nano 2025.08.14.1358 · asset 2025.8.21.1028</span></div>
 </div>
 
 <ol class="findings">

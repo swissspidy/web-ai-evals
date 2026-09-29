@@ -104,3 +104,37 @@ describe('diff thresholds', () => {
     expect(diffRuns(run('a', [withWords(40)]), run('b', [withWords(60)])).flags.join()).toContain('words improved');
   });
 });
+
+describe('review fixes', () => {
+  it('flags cells missing from the after run and metrics present on one side', () => {
+    const a = run('a', [cell('chrome', '154', 'v1', 1, 100), cell('chrome-beta', '155', 'v1', 1, 100)]);
+    const b = run('b', [cell('chrome', '154', 'v1', 1, 100)]);
+    expect(diffRuns(a, b).flags).toEqual(['sentiment/nano/chrome-beta: missing from the after run']);
+    const withExtra = cell('chrome', '154', 'v1', 1, 100);
+    withExtra.summary.scores.judge = 0.5;
+    expect(diffRuns(run('a', [cell('chrome', '154', 'v1', 1, 100)]), run('b', [withExtra])).flags).toEqual([
+      'sentiment/nano/chrome: judge added',
+    ]);
+  });
+  it('records headless changes', () => {
+    const h = cell('chrome', '154', 'v1', 1, 100);
+    h.environment.browser.headless = true;
+    const d = diffRuns(run('a', [cell('chrome', '154', 'v1', 1, 100)]), run('b', [h]));
+    expect(d.cells[0].envChanges.map((e) => e.field)).toContain('browser.headless');
+  });
+  it('keeps cells from two runs on the same kind of host apart', () => {
+    const html = renderReport([
+      run('a', [cell('chrome', '154', 'v1', 1, 100, 'out-from-run-a')]),
+      run('b', [cell('chrome', '154', 'v1', 1, 100, 'out-from-run-b')]),
+    ]);
+    expect(html).toContain('out-from-run-a');
+    expect(html).toContain('out-from-run-b');
+    expect(html).toContain('#1');
+    expect(html).toContain('#2');
+  });
+  it('escapes pipes in Markdown tables', () => {
+    const c = cell('chrome', '154', 'v1', 1, 100);
+    c.backend.id = 'a|b';
+    expect(renderMarkdown([run('a', [c])])).toContain('| a\\|b |');
+  });
+});

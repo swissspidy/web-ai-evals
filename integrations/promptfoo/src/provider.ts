@@ -15,8 +15,8 @@ import path from 'node:path';
  *         browser: chrome                 # or { channel, headless, presets, ... }
  *         backend: { kind: prompt-api }
  *
- * One browser session is shared by every provider instance that uses the same
- * browser id; calls are serialized (one GPU job at a time) and the browser
+ * One browser session is shared by every provider instance with the same
+ * launch options; calls are serialized (one GPU job at a time) and the browser
  * closes after `idleCloseMs` without calls so promptfoo can exit.
  */
 export interface ProviderConfig {
@@ -62,6 +62,8 @@ export default class WebAIEvalsProvider {
   private readonly spec: BackendSpec;
   private readonly task: TaskDefinition;
   private readonly browser: BrowserConfig & { id: string };
+  /** Sessions are shared only between providers with identical launch options. */
+  private readonly sessionKey: string;
 
   constructor(options: { id?: string; config: ProviderConfig }) {
     if (!options?.config?.backend?.kind) throw new Error('web-ai-evals provider: config.backend.kind is required');
@@ -70,6 +72,7 @@ export default class WebAIEvalsProvider {
     this.spec = { ...this.config.backend, id: this.config.backend.id ?? `${this.config.backend.kind}${this.config.backend.model ? `:${this.config.backend.model}` : ''}` };
     this.task = this.config.task ?? { type: 'generate', prompt: '{{text}}' };
     this.providerId = options.id ?? `web-ai-evals:${this.browser.id}:${this.spec.id}`;
+    this.sessionKey = JSON.stringify([this.browser, this.config.profilesDir ?? null, this.config.port ?? null]);
   }
 
   id(): string {
@@ -77,7 +80,7 @@ export default class WebAIEvalsProvider {
   }
 
   private shared(): SharedSession {
-    let s = sessions.get(this.browser.id);
+    let s = sessions.get(this.sessionKey);
     if (!s) {
       s = {
         session: BrowserSession.open({
@@ -89,7 +92,7 @@ export default class WebAIEvalsProvider {
         queue: Promise.resolve(),
         users: 0,
       };
-      sessions.set(this.browser.id, s);
+      sessions.set(this.sessionKey, s);
     }
     return s;
   }
@@ -105,7 +108,7 @@ export default class WebAIEvalsProvider {
     } finally {
       shared.users--;
       if (shared.users === 0) {
-        shared.idle = setTimeout(() => void closeSession(this.browser.id), this.config.idleCloseMs ?? 3000);
+        shared.idle = setTimeout(() => void closeSession(this.sessionKey), this.config.idleCloseMs ?? 3000);
       }
     }
   }
@@ -115,7 +118,7 @@ export default class WebAIEvalsProvider {
     try {
       session = await shared.session;
     } catch (err) {
-      sessions.delete(this.browser.id);
+      sessions.delete(this.sessionKey);
       return { error: `could not launch ${this.browser.id}: ${(err as Error).message.split('\n')[0]}` };
     }
     const key = JSON.stringify([this.spec, this.task]);

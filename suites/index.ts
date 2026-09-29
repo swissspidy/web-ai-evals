@@ -5,8 +5,9 @@
 import { chrF, classification, contains, jsonFieldMatch, jsonSchema, rougeL, wordCount } from '@web-ai-evals/scorers';
 import type { SuiteConfig } from '@web-ai-evals/runner';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
-const here = (p: string) => new URL(p, import.meta.url).pathname;
+const here = (p: string) => fileURLToPath(new URL(p, import.meta.url));
 const extractionSchema = JSON.parse(readFileSync(here('./extraction/schema.json'), 'utf8')) as Record<string, unknown>;
 
 export const sentiment: SuiteConfig = {

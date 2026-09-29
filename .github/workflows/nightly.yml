@@ -12,6 +12,9 @@ on:
         description: Comma-separated Chrome channels
         default: chrome,chrome-beta,chrome-canary
 
+permissions:
+  contents: read
+
 concurrency:
   group: nightly-gpu
   cancel-in-progress: false
@@ -22,6 +25,7 @@ jobs:
     timeout-minutes: 120
     env:
       WAE_CHANNELS: ${{ inputs.channels || 'chrome,chrome-beta,chrome-canary' }}
+      WAE_HISTORY: ${{ vars.WAE_HISTORY }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -31,18 +35,21 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - name: Run nightly suite and diff against the previous night
+        id: nightly
         run: |
           history="${WAE_HISTORY:-$HOME/web-ai-evals-history}"
-          echo "WAE_HISTORY_DIR=$history" >> "$GITHUB_ENV"
           pnpm wae nightly --config nightly.config.ts --history "$history" --fail-on-flags
       - name: Collect this run's files
-        if: always()
+        # Only files written by this run: if it failed before writing one, upload nothing
+        # rather than a previous night's report.
+        if: always() && steps.nightly.outputs.run-file != ''
+        env:
+          RUN_FILE: ${{ steps.nightly.outputs.run-file }}
         run: |
           mkdir -p nightly-out
-          latest="$(ls -t "$WAE_HISTORY_DIR"/*.json 2>/dev/null | head -1)"
-          [ -n "$latest" ] && cp "${latest%.json}".* nightly-out/ || true
+          cp "${RUN_FILE%.json}".* nightly-out/
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.nightly.outputs.run-file != ''
         with:
           name: nightly-${{ github.run_id }}
           path: nightly-out/

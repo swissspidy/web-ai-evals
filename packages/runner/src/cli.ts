@@ -180,6 +180,7 @@ async function main(argv: string[]): Promise<number> {
       process.stdout.write(res.markdown + '\n');
       if (process.env.GITHUB_STEP_SUMMARY) await writeFile(process.env.GITHUB_STEP_SUMMARY, res.markdown, { flag: 'a' });
       console.error(`results: ${res.file}${res.previous ? `\ncompared with: ${res.previous}` : ''}`);
+      if (process.env.GITHUB_OUTPUT) await writeFile(process.env.GITHUB_OUTPUT, `run-file=${res.file}\n`, { flag: 'a' });
       if (!res.run.cells.length) return 1;
       return values['fail-on-flags'] && res.drift?.flags.length ? 2 : 0;
     }

@@ -99,16 +99,16 @@ export const translatorAdapter: BackendAdapter = {
     const get = (source: string, target: string) => {
       const key = `${source}>${target}`;
       if (!translators.has(key)) {
-        translators.set(
-          key,
-          g.Translator.create({
-            sourceLanguage: source,
-            targetLanguage: target,
-            monitor(m: EventTarget) {
-              m.addEventListener('downloadprogress', (e) => ctx.onProgress({ progress: (e as ProgressEvent).loaded }));
-            },
-          }),
-        );
+        const created: Promise<any> = g.Translator.create({
+          sourceLanguage: source,
+          targetLanguage: target,
+          monitor(m: EventTarget) {
+            m.addEventListener('downloadprogress', (e) => ctx.onProgress({ progress: (e as ProgressEvent).loaded }));
+          },
+        });
+        // A failed create() must not poison later examples (or retries) for this pair.
+        created.catch(() => translators.delete(key));
+        translators.set(key, created);
       }
       return translators.get(key)!;
     };
@@ -123,7 +123,7 @@ export const translatorAdapter: BackendAdapter = {
         return { output };
       },
       async dispose() {
-        for (const t of translators.values()) (await t).destroy?.();
+        for (const t of translators.values()) (await t.catch(() => undefined))?.destroy?.();
       },
     };
   },

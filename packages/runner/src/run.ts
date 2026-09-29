@@ -136,7 +136,7 @@ export async function runEvals(config: ResolvedConfig, options: RunEvalsOptions 
       // every suite: later cells reuse the failure instead of waiting out the load timeout again.
       const failedLoads = new Map<string, LoadReport>();
       try {
-        for (const loaded of suites) {
+        browserCells: for (const loaded of suites) {
           for (const spec of backendsFor(config, loaded.suite, filter).filter((b) => !b.browsers || b.browsers.includes(browser.id))) {
             if (done.has(`${loaded.suite.id}/${spec.id}/${browser.id}`)) continue;
             let cell: CellResult | undefined;
@@ -155,7 +155,18 @@ export async function runEvals(config: ResolvedConfig, options: RunEvalsOptions 
               if (!crashed || attempt > 1) break;
               log(`${browser.id} crashed, relaunching`);
               await session.close();
-              session = await open();
+              try {
+                session = await open();
+              } catch (err) {
+                // e.g. the crashed process still holds the profile lock: skip the rest of this
+                // browser, keep what was measured, and move on to the next browser.
+                const msg = (err as Error).message.split('\n')[0];
+                log(`could not relaunch ${browser.id}: ${msg}`);
+                run.notes = [...(run.notes ?? []), `browser ${browser.id} failed to relaunch after a crash: ${msg}`];
+                if (cell && reusable(cell)) run.cells.push(cell);
+                await save();
+                break browserCells;
+              }
             }
             if (!cell) continue;
             run.cells.push(cell);

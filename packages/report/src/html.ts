@@ -142,7 +142,10 @@ function hostLabel(run: RunFile): string {
 function mergeCells(runs: RunFile[]): CellResult[] {
   const count = new Map<string, number>();
   for (const r of runs) for (const c of r.cells) count.set(c.key, (count.get(c.key) ?? 0) + 1);
-  return runs.flatMap((r) => r.cells.map((c) => ((count.get(c.key) ?? 0) > 1 ? { ...c, key: `${c.key} @ ${hostLabel(r)}` } : c)));
+  const labels = runs.map(hostLabel);
+  // Two runs from the same kind of host still need distinct keys: number them.
+  const suffix = runs.map((r, i) => (labels.filter((l) => l === labels[i]).length > 1 ? `${labels[i]} #${i + 1}` : labels[i]));
+  return runs.flatMap((r, i) => r.cells.map((c) => ((count.get(c.key) ?? 0) > 1 ? { ...c, key: `${c.key} @ ${suffix[i]}` } : c)));
 }
 
 interface Series {

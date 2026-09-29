@@ -61,6 +61,7 @@ export interface DiffOptions {
 
 const ENV_FIELDS: Array<[string, (c: CellResult) => unknown]> = [
   ['browser.version', (c) => c.environment.browser.version],
+  ['browser.headless', (c) => c.environment.browser.headless],
   ['backend.model', (c) => c.environment.backend.model],
   ['backend.modelVersion', (c) => c.environment.backend.modelVersion],
   ['backend.builtInComponents', (c) => c.environment.backend.details?.builtInComponents],
@@ -93,13 +94,20 @@ export function diffRuns(before: RunFile, after: RunFile, options: DiffOptions =
     if (!ca) continue;
     cells.push(diffCell(cross ? `${key} (${options.browsers!.before} → ${options.browsers!.after})` : key, cb, ca, scoreThreshold, relativeThreshold, latencyRatio, flagFields));
   }
-  const flags = cells.flatMap((c) => c.flags.map((f) => `${c.key}: ${f}`));
+  const onlyBefore = [...a.keys()].filter((k) => !b.has(k));
+  const onlyAfter = [...b.keys()].filter((k) => !a.has(k));
+  const flags = [
+    ...cells.flatMap((c) => c.flags.map((f) => `${c.key}: ${f}`)),
+    // A cell that disappeared (e.g. a browser failed to launch) must not read as "no changes".
+    ...onlyBefore.map((k) => `${k}: missing from the after run`),
+    ...onlyAfter.map((k) => `${k}: new in the after run`),
+  ];
   return {
     before: { runId: before.runId, startedAt: before.startedAt, name: before.name },
     after: { runId: after.runId, startedAt: after.startedAt, name: after.name },
     cells,
-    onlyBefore: [...a.keys()].filter((k) => !b.has(k)),
-    onlyAfter: [...b.keys()].filter((k) => !a.has(k)),
+    onlyBefore,
+    onlyAfter,
     flags,
   };
 }
@@ -125,11 +133,17 @@ function diffCell(
   }
 
   const scores: ScoreDelta[] = [];
-  const metrics = new Set([...Object.keys(before.summary.scores), ...Object.keys(before.summary.aggregates)]);
+  const metrics = new Set(
+    [before, after].flatMap((c) => [...Object.keys(c.summary.scores), ...Object.keys(c.summary.aggregates)]),
+  );
   for (const metric of metrics) {
+    if (metric.includes('.f1:')) continue;
     const x = before.summary.scores[metric] ?? before.summary.aggregates[metric];
     const y = after.summary.scores[metric] ?? after.summary.aggregates[metric];
-    if (x === undefined || y === undefined || metric.includes('.f1:')) continue;
+    if (x === undefined || y === undefined) {
+      flags.push(`${metric} ${x === undefined ? 'added' : 'removed'}`);
+      continue;
+    }
     const delta = y - x;
     // Scores in 0..1 use the absolute threshold; counts and other unbounded metrics
     // (e.g. words per output) use a relative one.
