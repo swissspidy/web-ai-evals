@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightly drift: nightly-built-in</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --good: #0ca30c; --good-text: #006300; --warning: #fab219; --critical: #d03b3b;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --good-text: #0ca30c;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --good-text: #0ca30c;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 28px; margin: 0 0 4px; }
+h2 { font-size: 21px; margin: 40px 0 8px; }
+h3 { font-size: 16px; margin: 24px 0 8px; }
+p, li { color: var(--ink-2); max-width: 75ch; }
+code { font-size: 13px; }
+.meta { color: var(--muted); font-size: 13px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 12px 0; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { color: var(--ink-2); font-weight: 600; white-space: nowrap; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.key { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: baseline; }
+.status { white-space: nowrap; }
+.status::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--muted); }
+.status.good::before { background: var(--good); } .status.warning::before { background: var(--warning); } .status.critical::before { background: var(--critical); }
+.why { color: var(--muted); font-size: 12px; display: block; max-width: 40ch; }
+details > summary { cursor: pointer; color: var(--ink-2); margin: 8px 0; }
+.out { max-width: 36ch; white-space: pre-wrap; word-break: break-word; }
+.sc { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
+.chart { width: 100%; max-width: 820px; height: auto; display: block; }
+.chart text { fill: var(--muted); font-size: 12px; }
+.chart .lbl { fill: var(--ink-2); font-size: 12px; }
+.chart .gridline { stroke: var(--grid); stroke-width: 1; }
+.chart .axis { stroke: var(--axis); stroke-width: 1; }
+.chart .pt { stroke: var(--surface); stroke-width: 2; }
+.chart .hit { fill: transparent; cursor: default; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--ink-2); margin: 4px 0 8px; padding: 0; list-style: none; }
+#tip { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.12); display: none; max-width: 320px; z-index: 10; }
+#tip strong { font-size: 14px; }
+.flag { color: var(--critical); }
+.up { color: var(--good-text); }
+</style>
+</head>
+<body>
+<main>
+<h1>Nightly drift: nightly-built-in</h1>
+<p class="meta">before <code>2026-09-29T16-40-37-93bdb9</code> (2026-09-29T16:40) → after <code>2026-09-29T16-52-57-74e6a8</code> (2026-09-29T16:52)</p><div class="card"><h3>No flagged changes</h3></div><h2>sentiment/prompt-api/chrome</h2><h3>Metrics</h3><div class="scroll"><table><thead><tr><th>Metric</th><th class="n">Before</th><th class="n">After</th><th class="n">Change</th></tr></thead><tbody>
+<tr><td>accuracy</td><td class="n">1.000</td><td class="n">1.000</td><td class="n ">+0.000</td></tr><tr><td>accuracy.macroF1</td><td class="n">1.000</td><td class="n">1.000</td><td class="n ">+0.000</td></tr><tr><td>accuracy.invalidLabelRate</td><td class="n">0.000</td><td class="n">0.000</td><td class="n ">+0.000</td></tr>
+<tr><td>ttftMs.p50</td><td class="n">1.35 s</td><td class="n">1.30 s</td><td class="n ">×0.96</td></tr><tr><td>totalMs.p50</td><td class="n">1.40 s</td><td class="n">1.35 s</td><td class="n ">×0.97</td></tr><tr><td>tokensPerSecond.p50</td><td class="n">65.3</td><td class="n">63.1</td><td class="n ">×0.97</td></tr>
+</tbody></table></div><h2>extraction/prompt-api/chrome</h2><h3>Metrics</h3><div class="scroll"><table><thead><tr><th>Metric</th><th class="n">Before</th><th class="n">After</th><th class="n">Change</th></tr></thead><tbody>
+<tr><td>fields</td><td class="n">1.000</td><td class="n">0.975</td><td class="n ">-0.025</td></tr><tr><td>jsonSchema</td><td class="n">1.000</td><td class="n">1.000</td><td class="n ">+0.000</td></tr>
+<tr><td>ttftMs.p50</td><td class="n">1.32 s</td><td class="n">1.27 s</td><td class="n ">×0.96</td></tr><tr><td>totalMs.p50</td><td class="n">4.60 s</td><td class="n">4.35 s</td><td class="n ">×0.95</td></tr><tr><td>tokensPerSecond.p50</td><td class="n">12.2</td><td class="n">12.9</td><td class="n ">×1.06</td></tr>
+</tbody></table></div><details><summary>1 of 10 outputs changed (10.0%)</summary><div class="scroll"><table><thead><tr><th>Example</th><th>Before</th><th>After</th></tr></thead><tbody><tr><td><code>ext08</code></td><td class="out">{&quot;name&quot;: &quot;Piotr Nowak&quot;, &quot;date&quot;: &quot;2026-12-19&quot;, &quot;city&quot;: &quot;Kraków&quot;, &quot;guests&quot;: 7}</td><td class="out">{&quot;name&quot;: &quot;Contact&quot;, &quot;date&quot;: &quot;2026-12-19&quot;, &quot;city&quot;: &quot;Kraków&quot;, &quot;guests&quot;: 7}</td></tr></tbody></table></div></details><h2>summarization/prompt-api/chrome</h2><h3>Metrics</h3><div class="scroll"><table><thead><tr><th>Metric</th><th class="n">Before</th><th class="n">After</th><th class="n">Change</th></tr></thead><tbody>
+<tr><td>rougeL</td><td class="n">0.383</td><td class="n">0.346</td><td class="n ">-0.036</td></tr><tr><td>words</td><td class="n">41.000</td><td class="n">45.333</td><td class="n ">+4.333</td></tr>
+<tr><td>ttftMs.p50</td><td class="n">1.31 s</td><td class="n">1.31 s</td><td class="n ">×1.00</td></tr><tr><td>totalMs.p50</td><td class="n">5.26 s</td><td class="n">5.99 s</td><td class="n ">×1.14</td></tr><tr><td>tokensPerSecond.p50</td><td class="n">12.6</td><td class="n">12.3</td><td class="n ">×0.98</td></tr>
+</tbody></table></div><details><summary>6 of 6 outputs changed (100.0%)</summary><div class="scroll"><table><thead><tr><th>Example</th><th>Before</th><th>After</th></tr></thead><tbody><tr><td><code>sum01</code></td><td class="out">Eastbrook&#39;s town council approved a 4.2 million euro renovation of the old railway depot to create a public library and community workshop, a project residents have long advocated for.  The renovation will include a reading room, makerspace, and café, funded by a regional heritage fund and slated for completion in approximately eighteen months.
+
+
+
+</td><td class="out">Eastbrook&#39;s town council approved converting the abandoned railway depot into a new public library and community workshop with a €4.2 million renovation funded by a heritage fund, aiming to address the town&#39;s need for a larger, more versatile library space. Construction is slated to begin next spring and will feature a reading room, makerspace, and café.
+
+
+
+</td></tr><tr><td><code>sum02</code></td><td class="out">A study showed that taking a ten-minute walk after lunch reduced afternoon fatigue in office workers, though it didn&#39;t significantly impact productivity. Further research is planned to confirm the findings in a randomized trial.
+
+
+
+</td><td class="out">A ten-minute post-lunch walk led to lower fatigue levels and marginally increased task completion in office workers, though further research is needed to confirm the findings due to potential selection bias.
+
+
+
+</td></tr><tr><td><code>sum03</code></td><td class="out">The city&#39;s bike-sharing program achieved record ridership, fueled by new electric bikes and docking stations, but faces challenges from theft and empty stations, with plans underway to improve distribution and rider incentives. 
+
+
+
+</td><td class="out">The city&#39;s bike-sharing program achieved its record-breaking busiest year yet with 3.1 million rides, fueled by new electric bikes and docking stations, but faces challenges from vandalism and inconsistent station availability. City officials are implementing strategies like bike redistribution and discounts to improve the system&#39;s efficiency and reduce costs.
+
+
+
+</td></tr><tr><td><code>sum04</code></td><td class="out">A harbour district bakery transitioned to electric ovens powered by rooftop solar and a battery, resulting in a significant decrease in energy costs, albeit a substantial initial investment, and requiring slight recipe adjustments due to improved oven consistency.
+
+
+
+</td><td class="out">A bakery in the harbour district successfully transitioned to electricity-powered ovens using rooftop solar panels, reducing energy costs by roughly a third despite a substantial upfront investment.  They had to slightly adjust recipes due to the ovens&#39; more even heat distribution, and customer feedback was incorporated to optimize baking times.
+
+
+
+</td></tr><tr><td><code>sum05</code></td><td class="out">A heavy snowstorm, with accumulations of up to 30 centimetres and strong winds, is expected in northern hills from Thursday evening to Saturday morning, potentially causing travel disruptions and requiring schools to decide on closures. Residents are advised to prioritize staying indoors and prepare for potential isolation.
+
+
+
+</td><td class="out">Heavy snow, with accumulations of up to 30 centimetres, is expected across northern hills Thursday evening through Saturday morning, potentially causing travel disruptions and requiring preparations like blankets and charged phones. Schools will determine closures on Friday morning.
+
+
+
+</td></tr><tr><td><code>sum06</code></td><td class="out">The lake reserve&#39;s bird census reached a record 212 species this year, boosted by reed bed restoration and invasive fish removal, while also documenting continued decline in swifts and house martins related to insect loss.
+
+
+
+</td><td class="out">This year&#39;s weekend bird census at the lake reserve recorded a record 212 species, boosted by the return of breeding ospreys and improved habitat, while declining populations of swifts and house martins indicate broader environmental challenges. 
+
+
+
+</td></tr></tbody></table></div></details><h2>summarization/summarizer/chrome</h2><h3>Metrics</h3><div class="scroll"><table><thead><tr><th>Metric</th><th class="n">Before</th><th class="n">After</th><th class="n">Change</th></tr></thead><tbody>
+<tr><td>rougeL</td><td class="n">0.152</td><td class="n">0.166</td><td class="n ">+0.014</td></tr><tr><td>words</td><td class="n">226.500</td><td class="n">219.000</td><td class="n ">-7.500</td></tr>
+<tr><td>ttftMs.p50</td><td class="n">1.19 s</td><td class="n">1.21 s</td><td class="n ">×1.02</td></tr><tr><td>totalMs.p50</td><td class="n">30.3 s</td><td class="n">27.8 s</td><td class="n ">×0.92</td></tr><tr><td>tokensPerSecond.p50</td><td class="n">11.1</td><td class="n">11.4</td><td class="n ">×1.02</td></tr>
+</tbody></table></div><details><summary>6 of 6 outputs changed (100.0%)</summary><div class="scroll"><table><thead><tr><th>Example</th><th>Before</th><th>After</th></tr></thead><tbody><tr><td><code>sum01</code></td><td class="out">## Eastbrook to Launch New Library and Workshop with Depot Renovation
+
+**Eastbrook, [Country - implied, but needs adding for a complete article]** – The town council of Eastbrook has approved a significant project to transform the derelict railway depot into a modern public library and community workshop. The decision follows years of advocacy by residents who have voiced concerns over the inadequacy of the town&#39;s current library facilities.
+
+The depot, which has sat vacant since the railway line&#39;s closure in 2009, will undergo a renovation estimated to cost 4.2 million euros. Approximately two-thirds of the funding will be secured from the regional heritage fund, highlighting the council&#39;s commitment to preservation and community enrichment.
+
+Construction is slated to commence next spring and is projected to take approximately eighteen months.  
+
+The new facility aims to address the town’s need for expanded library space and community amenities.  Among the planned features are a spacious reading room, a modern makerspace equipped with 3D printers, and a café operated by a local social enterprise. This addition will provide a venue for community engagement and foster innovation.
+
+“The town council recognizes the untapped potential of this historic building,” said a spokesperson for the council. “This project will significantly enhance Eastbrook&#39;s offerings, creating a vibrant hub for learning, creation, and community connection.”
+
+Residents expressed strong support for the project, citing the limitations of the existing library and the desire for a more versatile space.  The development fulfills a long-standing request from the community to revitalize this iconic landmark and create a modern center for Eastbrook.</td><td class="out">## Eastbrook to Transform Former Railway Depot into Public Library &amp; Community Workshop
+
+**Eastbrook** - The town council of Eastbrook unanimously approved a project to convert the derelict former railway depot into a modern public library and community workshop, a development many residents have campaigned for years to achieve. The building has stood vacant since the Eastbrook Railway line ceased operations in 2009.
+
+The ambitious project, estimated to cost 4.2 million euros, will secure two-thirds of the funding from a regional heritage fund. Construction is planned to commence next spring and is expected to take approximately eighteen months.
+
+The initiative addresses a long-standing need in the town, with residents arguing that the current library facilities are inadequate, particularly regarding space for community events. 
+
+The new library will feature:
+
+*   **A dedicated reading room:** Designed to provide a comfortable and inviting space for reading and study.
+*   **A Makerspace:** Equipped with 3D printers and other tools, encouraging creativity and innovation.
+*   **A Café:** Operated by a local social enterprise, providing a vital economic opportunity and fostering community social connections.
+
+This development marks a significant step towards revitalizing the Eastbrook depot site and strengthening the town&#39;s community offerings.</td></tr><tr><td><code>sum02</code></td><td class="out">## The Power of a Short Walk: Lunchtime Movement Boosts Energy and Productivity
+
+**A new study suggests that a brief lunchtime walk can significantly improve energy levels and potentially boost productivity in office workers.** researchers analyzed data from a study of 1,200 office workers who participated in a four-week research project. The findings, published by [insert publication source if known - otherwise omit], indicate that individuals who took a ten-minute walk after lunch reported feeling less fatigued in the afternoon compared to those who remained seated at their desks.
+
+The study involved weekly questionnaires where participants rated their energy levels every hour. The researchers found a clear correlation between lunchtime walks and reduced afternoon tiredness. Interestingly, walkers also performed slightly more tasks, although the reported difference in productivity was modest and not deemed statistically significant.
+
+Researchers Dr. [Authors&#39; Names] acknowledge a potential confounding factor: participants were able to choose whether or not to walk. This means that those who were already more energized might simply be more inclined to engage in physical activity, potentially skewing the results.
+
+To address this limitation, the researchers are planning a randomized controlled trial, hoping to isolate the specific impact of lunchtime walks. 
+
+**Key takeaways:**
+
+* **Lunchtime walks reduce afternoon tiredness:** Participants who walked felt less fatigued than desk-bound individuals.
+* **Potential productivity boost:** Walkers completed slightly more tasks.
+* **Need for a randomized trial:** The findings need to be confirmed through a controlled study to avoid confounding factors.
+
+This research highlights the potential benefits of incorporating brief movement breaks into the workday, emphasizing that even short bursts of physical activity can contribute to improved well-being and productivity.
+
+
+
+**Please note:** As no publication source was provided in the original prompt, I&#39;ve indicated where this should go. A proper citation would add credibility to the article.  Also, the authors&#39; names would be included.</td><td class="out">## The Power of a Post-Lunch Stroll: Office Workers Report Improved Energy and Task Performance
+
+A new study of 1,200 office workers highlights the surprisingly positive impact of short breaks. Researchers found that taking a ten-minute walk after lunch significantly reduced afternoon fatigue compared to remaining seated at desks.  
+
+The study tracked energy levels of participants every hour for four weeks.  Those who integrated a brief walk into their routine consistently reported feeling less tired compared to their desk-bound counterparts. While the difference in productivity between the two groups was small and not statistically significant, walkers did accomplish slightly more tasks. 
+
+The authors of the study emphasize the need for caution when interpreting the results.  Because participants were largely responsible for deciding whether to walk, the data could be skewed by pre-existing differences in energy levels. 
+
+A promising next step is a planned randomized trial, which aims to eliminate potential confounding variables and definitively determine the benefits of post-lunch walks on productivity and well-being.  
+
+
+
+**Key Takeaways:**
+
+* **Short walks can combat afternoon fatigue.**
+* **Workers who walked reported lower energy levels compared to staying seated.**
+* **A small increase in task completion was observed among walkers.**
+* **Pre-existing energy levels likely played a role in participation.**
+* **Future research aims to isolate the specific benefits of post-lunch walks.**</td></tr><tr><td><code>sum03</code></td><td class="out">## Bike-Sharing Scheme Soars to New Heights, but Faces Challenges
+
+**[City Name], [Date]** - The city&#39;s bike-sharing scheme experienced its most successful year yet, recording a staggering 3.1 million rides – a 40% increase over the previous year.  This surge in popularity is credited to recent expansions, including the addition of 800 electric bikes and 60 new docking stations strategically placed in outer neighbourhoods.
+
+Average rides clocked in at 14 minutes, indicating convenient commutes and short trips.  The success isn&#39;t just ridership numbers, though.  Officials attribute the growth to enhanced accessibility, specifically mentioning the expanded network.
+
+However, challenges remain. The operator acknowledges that vandalism and theft has incurred losses of nearly half a million euros, impacting the overall efficiency of the program.  Furthermore, some stations located in the central areas frequently experience ridership shortages during the morning rush hour.
+
+To address these issues, the city plans to implement innovative solutions.  Trucks will be utilized to more regularly redistribute bikes across the network, ensuring availability for riders.  Additionally, a discounted rate is being tested for users who return bikes to understocked stations, incentivizing responsible redistribution.
+
+The rise in bike-sharing reflects a broader trend towards sustainable transportation, but highlights the ongoing need for investment in security and operational adjustments to ensure the program&#39;s continued viability and effectiveness.  </td><td class="out">## City Bike-Sharing Scheme Smashes Records, But Faces Operational Challenges
+
+The city&#39;s bike-sharing program has experienced a monumental year, logging a staggering 3.1 million rides – a 40% surge from the year prior. This unprecedented success is largely attributed to recent expansions, including the introduction of 800 electric bikes and the establishment of 60 new docking stations in underserved outer neighbourhoods.  
+
+The average ride duration clocked in at a respectable 14 minutes.  However, the thriving operation faces significant operational challenges. The operator reports a costly impact of around 500,000 euros due to vandalism and theft, highlighting vulnerabilities in security measures.  Furthermore,  empty docking stations, particularly in the city center during peak morning hours, present logistical difficulties.
+
+To address these concerns, the city is implementing a multi-pronged strategy. The operation plans to utilize trucks to redistribute bikes more strategically throughout the day, ensuring better utilization of available resources.  They are also experimenting with a discount program for riders motivated to return bikes to stations that are currently understocked.  This proactive approach suggests a commitment to refining the bike-sharing ecosystem for a more efficient and reliable service.
+
+
+
+**Key takeaways:**
+
+*   **Record Riding:** 3.1 million rides, a 40% increase year-over-year.
+*   **Expansion:** 800 electric bikes and 60 new docking stations.
+*   **Average Ride Length:** 14 minutes.
+*   **Challenges:**  Vandalism and theft (€500,000 cost), emptier stations in the morning.
+*   **Solutions:** Truck redistribution, discounted returns to understocked stations.</td></tr><tr><td><code>sum04</code></td><td class="out">## A Taste of the Future: Harbour Bakery Makes the Switch to Electric Baking
+
+**[City, Country]** - After three years of careful planning and testing, Harbour Bakery, a beloved small bakery nestled in the harbour district, has embraced a greener future by transitioning its ovens from gas to electricity powered by rooftop solar panels and a battery system. 
+
+The move represents a significant win for both the environment and the bakery’s bottom line.  According to owner [Bakery Owner&#39;s Name], energy costs have decreased by approximately one-third since the switch. While the initial investment of 90,000 euros represents a considerable upfront cost, the owner anticipates recouping the investment over roughly seven years.
+
+This transition wasn&#39;t without its challenges. The new electric ovens offer a different heating profile compared to traditional gas ovens, necessitating adjustments to existing recipes. Notably, the crust on a popular signature rye bread has subtly changed.  “[Bakery Owner&#39;s Name]” explained, &quot;The even heat of the electric ovens demanded we re-evaluate baking times. We had to tweak several recipes to ensure consistency, especially regarding the crust.&quot;
+
+To ensure success, the bakery undertook a comprehensive approach, inviting loyal customers to participate in blind tastings, diligently fine-tuning the baking procedures to achieve optimal results. 
+
+This innovative leap reflects a burgeoning trend in the food industry towards sustainable practices.  Harbour Bakery’s success demonstrates that embracing eco-friendly solutions doesn&#39;t compromise quality; it can even enhance it, resulting in a slightly different, but equally delicious, baking experience. It&#39;s a heartwarming example of a business adapting to the future while remaining grounded in its commitment to its community.</td><td class="out">## Harbour Bakery Embraces Sustainable Baking with Electric Revolution
+
+**[HARBOUR DISTRICT]** -  A small bakery nestled in the bustling harbour district has made a significant leap towards sustainability by switching to electricity-powered ovens equipped with rooftop solar panels and battery storage. After a three-year testing period, the bakery has successfully transitioned its baking process, reporting substantial cost savings and adapting to the changes brought about by the new technology.
+
+The owner of the bakery, [Bakery Owner&#39;s Name - though not included in the provided text, this is a good practice to note], invested €90,000 in the solar panel and battery system. The payback period is estimated to be around seven years. 
+
+&quot;We&#39;re pleased to report that our energy costs have decreased by approximately a third,&quot; [Owner&#39;s Name] shared.  &quot;While the upfront investment was considerable, we’re seeing a tangible return on our investment already.&quot;
+
+However, the transition wasn&#39;t without its challenges. The new electric ovens heat more evenly than their gas counterparts, requiring adjustments to the bakery&#39;s existing recipes.  The most noticeable change has been in the crust of their signature rye bread.  To ensure the new process yields satisfactory results, the bakery organized blind tastings with regular customers to refine the baking times. The feedback gathered helped ensure quality while adapting to the advantages of the electric ovens.
+
+This initiative highlights the evolving landscape of sustainable business practices and the potential benefits of embracing renewable energy sources, even for small businesses like this harbour bakery.  
+
+
+
+**Key takeaways from the article:**
+
+* **Sustainable Transition:** The bakery successfully switched to electric ovens powered by renewable energy.
+* **Cost Savings:**  Energy costs decreased significantly, though payback period is extended.
+* **Recipe Adjustments:** Modifications to existing recipes were necessary due to uneven heat distribution.
+* **Customer Feedback:** The importance of customer blind taste tests for refining baking processes.
+* **Renewable Energy Adoption:**  A small example of how businesses can embrace solar energy.</td></tr><tr><td><code>sum05</code></td><td class="out">## Recap: Heavy Snow Warning Issued for Northern Hills
+
+**Key takeaways from the National Weather Service warning:**
+
+* **Severity:** Amber warning for heavy snow.
+* **Affected Area:** Northern hills.
+* **Timeline:** Thursday evening - Saturday morning.
+* **Snowfall:** Up to 30 cm on higher ground; strong winds with drift potential.
+* **Potential Disruptions:** Travel disruption, possible isolation of rural communities.
+* **School Closures:** Schools to decide on closures on Friday morning.
+* **Advice for Travelers:** Avoid unnecessary journeys, carry blankets, water, and charged phone.
+
+
+
+**In short: Be prepared for a potentially disruptive snowstorm in the northern hills this weekend. Travel with caution and ensure you have the essentials.**</td><td class="out">## Headline: Amber Warning Issued for Heavy Snow Across Northern Hills
+
+**Summary:** The National Weather Service has issued an amber warning for heavy snow across the northern hills, expected from Thursday evening until Saturday morning. Significant amounts of snow (up to 30 centimetres) and strong winds are forecast, likely causing travel disruptions and potentially isolating rural communities.
+
+**Key Points:**
+
+* **Warning Issued:** Amber warning for heavy snow in the northern hills.
+* **Timing:** Thursday evening until Saturday morning.
+* **Snowfall:** Up to 30 centimetres on higher ground.
+* **Wind:** Strong winds causing drifts.
+* **Travel Disruptions:** Highly likely.
+* **Rural Isolation:** Possible, with some communities cut off.
+* **School Closures:** Schools will decide on Friday morning.
+* **Recommendations:** Avoid unnecessary journeys, carry blankets, water, and a charged phone if travelling is unavoidable.</td></tr><tr><td><code>sum06</code></td><td class="out">## Birding Boom at Lake Reserve: Historic Census Yields 212 Species
+
+**Lake Reserve -** The Lake Reserve buzzed with activity this weekend as volunteers tallied the results of the annual weekend bird census.  The numbers are impressive, with a remarkable **212 species of birds counted**, marking the highest total since the census began in 1995.
+
+The census yielded exciting highlights, including the return of a pair of **breeding ospreys** – a significant development as the majestic birds hadn’t nested at the lake for over **100 years**. 
+
+Experts believe this thriving population is directly linked to recent habitat restoration efforts. The intricate network of revitalized **reed beds** and the **removal of invasive fish** have created a more hospitable environment for birds, providing an abundance of food sources.
+
+However, not all species rebounded. The census revealed a continued decline in **swift and house martin populations**, a trend observed nationwide. This decline is attributed to a disruption of the natural food web, primarily the availability of insects, crucial for these aerial foragers. 
+
+Despite the challenges facing certain species, the census presented a largely positive picture.  The increased biodiversity and overall health of the lake reserve are a testament to successful conservation efforts.</td><td class="out">## Lake Reserve Bird Census Reveals a Boost for Wildlife, But Concerns Remain
+
+A recent weekend census at the lake reserve showcased a remarkable surge in bird diversity. Volunteers counted **212 species of birds**, raising the record-high number since the initiative began in 1995. 
+
+**A significant highlight** of this year&#39;s census was the sighting of a pair of **breeding ospreys** – a truly exceptional occurrence. These birds hadn&#39;t nested at the lake for over a century, suggesting the reserve&#39;s ecosystem has undergone a substantial transformation.
+
+Experts attribute this boom to **successful ecosystem restoration efforts**.  These included the **restoration of reed beds** which provide crucial habitat, and the **removal of invasive fish** which were previously competing with native birds for food sources. 
+
+**However, not all birds prospered.** The census also revealed that numbers of **swifts and house martins continued to decline**, mirroring a broader national trend driven by dwindling insect populations. This raises concerns about the long-term health of the reserve&#39;s avian community.
+
+
+
+**Key Takeaways:**
+
+* **Record-breaking bird diversity:** 212 species counted, the highest since 1995.
+* **Breeding Osprey sighting:** A first in over a century, indicating ecosystem recovery.
+* **Restoration efforts successful:** Reed bed restoration and invasive fish removal contributed to bird abundance.
+* **Concern over declining swifts and house martins:**  Reflects a national trend linked to insects.</td></tr></tbody></table></div></details><h2>sentiment/prompt-api/chrome-beta</h2><h3>Metrics</h3><div class="scroll"><table><thead><tr><th>Metric</th><th class="n">Before</th><th class="n">After</th><th class="n">Change</th></tr></thead><tbody>
+<tr><td>accuracy</td><td class="n">1.000</td><td class="n">1.000</td><td class="n ">+0.000</td></tr><tr><td>accuracy.macroF1</td><td class="n">1.000</td><td class="n">1.000</td><td class="n ">+0.000</td></tr><tr><td>accuracy.invalidLabelRate</td><td class="n">0.000</td><td class="n">0.000</td><td class="n ">+0.000</td></tr>
+<tr><td>ttftMs.p50</td><td class="n">1.31 s</td><td class="n">1.25 s</td><td class="n ">×0.96</td></tr><tr><td>totalMs.p50</td><td class="n">1.32 s</td><td class="n">1.27 s</td><td class="n ">×0.97</td></tr><tr><td>tokensPerSecond.p50</td><td class="n">62.2</td><td class="n">67.5</td><td class="n ">×1.08</td></tr>
+</tbody></table></div><h2>extraction/prompt-api/chrome-beta</h2><h3>Metrics</h3><div class="scroll"><table><thead><tr><th>Metric</th><th class="n">Before</th><th class="n">After</th><th class="n">Change</th></tr></thead><tbody>
+<tr><td>fields</td><td class="n">1.000</td><td class="n">0.975</td><td class="n ">-0.025</td></tr><tr><td>jsonSchema</td><td class="n">1.000</td><td class="n">1.000</td><td class="n ">+0.000</td></tr>
+<tr><td>ttftMs.p50</td><td class="n">1.29 s</td><td class="n">1.32 s</td><td class="n ">×1.02</td></tr><tr><td>totalMs.p50</td><td class="n">4.55 s</td><td class="n">4.59 s</td><td class="n ">×1.01</td></tr><tr><td>tokensPerSecond.p50</td><td class="n">12.3</td><td class="n">12.1</td><td class="n ">×0.99</td></tr>
+</tbody></table></div><details><summary>1 of 10 outputs changed (10.0%)</summary><div class="scroll"><table><thead><tr><th>Example</th><th>Before</th><th>After</th></tr></thead><tbody><tr><td><code>ext08</code></td><td class="out">{&quot;name&quot;: &quot;Piotr Nowak&quot;, &quot;date&quot;: &quot;2026-12-19&quot;, &quot;city&quot;: &quot;Kraków&quot;, &quot;guests&quot;: 7}</td><td class="out">{&quot;name&quot;: &quot;Party&quot;, &quot;date&quot;: &quot;2026-12-19&quot;, &quot;city&quot;: &quot;Kraków&quot;, &quot;guests&quot;: 7}</td></tr></tbody></table></div></details><h2>summarization/prompt-api/chrome-beta</h2><h3>Metrics</h3><div class="scroll"><table><thead><tr><th>Metric</th><th class="n">Before</th><th class="n">After</th><th class="n">Change</th></tr></thead><tbody>
+<tr><td>rougeL</td><td class="n">0.356</td><td class="n">0.332</td><td class="n ">-0.024</td></tr><tr><td>words</td><td class="n">42.333</td><td class="n">41.000</td><td class="n ">-1.333</td></tr>
+<tr><td>ttftMs.p50</td><td class="n">1.25 s</td><td class="n">1.29 s</td><td class="n ">×1.03</td></tr><tr><td>totalMs.p50</td><td class="n">5.76 s</td><td class="n">5.33 s</td><td class="n ">×0.93</td></tr><tr><td>tokensPerSecond.p50</td><td class="n">12.0</td><td class="n">12.1</td><td class="n ">×1.01</td></tr>
+</tbody></table></div><details><summary>6 of 6 outputs changed (100.0%)</summary><div class="scroll"><table><thead><tr><th>Example</th><th>Before</th><th>After</th></tr></thead><tbody><tr><td><code>sum01</code></td><td class="out">Eastbrook&#39;s town council approved a major renovation to the old railway depot, transforming it into a public library and community workshop funded by a regional heritage fund, with construction slated to begin next spring. This new facility aims to address deficiencies in the existing library and provide community spaces for reading, crafting, and social interaction.</td><td class="out">Eastbrook&#39;s town council approved a 4.2 million euro renovation of the old railway depot, slated to become a public library and community workshop with a makerspace and café, funded largely by a regional heritage fund, after years of community advocacy for a larger facility. Construction is planned to begin next spring and will take eighteen months.
+
+
+
+</td></tr><tr><td><code>sum02</code></td><td class="out">A study found that a brief post-lunch walk improved afternoon energy levels in office workers, though the impact on productivity was modest and potentially influenced by individuals&#39; inherent energy. Future research will involve a randomized trial to confirm these findings.
+
+
+
+</td><td class="out">A study of office workers showed that taking a ten-minute walk after lunch led to reduced afternoon fatigue, although not a significant improvement in productivity. Researchers are planning a randomized trial to confirm these findings.
+</td></tr><tr><td><code>sum03</code></td><td class="out">The city&#39;s bike-sharing program experienced a record-breaking year with 3.1 million rides, fueled by new electric bikes and stations, but faces challenges with theft, vandalism, and fluctuating station availability, prompting plans to redistribute bikes more effectively. 
+
+
+
+</td><td class="out">The city&#39;s bike-sharing program experienced a record year, with millions of rides driven by new electric bikes and docking stations, although significant financial losses due to vandalism and uneven station usage are prompting operational improvements. 
+</td></tr><tr><td><code>sum04</code></td><td class="out">A bakery in a harbor district successfully transitioned to electricity-powered ovens with rooftop solar panels, lowering energy costs while requiring a sizable initial investment and minor recipe adjustments due to the ovens&#39; even heat. 
+
+
+
+</td><td class="out">A harbour district bakery transitioned to electric ovens powered by solar energy, resulting in lower energy costs, although significant upfront investment is required. The change required recipe adjustments due to the even heat of electric ovens, leading to blind tastings to perfect new baking times.</td></tr><tr><td><code>sum05</code></td><td class="out">A national amber warning has been issued for heavy snow from Thursday evening to Saturday morning in the northern hills, with significant snowfall and potential travel disruptions; schools will determine if they need to close, and authorities advise against unnecessary travel.
+
+
+
+</td><td class="out">Heavy snowfall is expected across northern hills, with potential travel disruptions and possible isolation for some communities. Schools may close on Friday, and residents are advised to avoid unnecessary travel and prepare for harsh conditions.
+
+
+
+</td></tr><tr><td><code>sum06</code></td><td class="out">A recent weekend bird census at a lake reserve revealed a record-breaking 212 species, a significant increase from previous counts, likely due to habitat restoration; however, the decline of swifts and house martins indicates a national trend of insect shortages.
+
+
+
+</td><td class="out">This year&#39;s bird census at the lake reserve recorded a record-high 212 species, partly due to habitat restoration and predator control, while declining populations of swifts and house martins indicated broader ecological challenges. 
+</td></tr></tbody></table></div></details><h2>summarization/summarizer/chrome-beta</h2><h3>Metrics</h3><div class="scroll"><table><thead><tr><th>Metric</th><th class="n">Before</th><th class="n">After</th><th class="n">Change</th></tr></thead><tbody>
+<tr><td>rougeL</td><td class="n">0.160</td><td class="n">0.160</td><td class="n ">-0.000</td></tr><tr><td>words</td><td class="n">224.833</td><td class="n">202.333</td><td class="n ">-22.500</td></tr>
+<tr><td>ttftMs.p50</td><td class="n">1.17 s</td><td class="n">1.18 s</td><td class="n ">×1.01</td></tr><tr><td>totalMs.p50</td><td class="n">28.9 s</td><td class="n">25.5 s</td><td class="n ">×0.88</td></tr><tr><td>tokensPerSecond.p50</td><td class="n">11.0</td><td class="n">11.2</td><td class="n ">×1.02</td></tr>
+</tbody></table></div><details><summary>6 of 6 outputs changed (100.0%)</summary><div class="scroll"><table><thead><tr><th>Example</th><th>Before</th><th>After</th></tr></thead><tbody><tr><td><code>sum01</code></td><td class="out">## Eastbrook Set to Launch New Public Library and Workshop in Historic Depot
+
+**Eastbrook, [Date of Article - assumed to be Monday]** - The town council of Eastbrook approved a major project to transform the historic railway depot into a vibrant public library and community workshop, marking a significant step towards addressing existing community needs.  The building, vacant since the railway line ceased operations in 2009, will undergo a costly but vital renovation, with a projected budget of 4.2 million euros.
+
+A substantial two-thirds of the renovation funding will be sourced from a regional heritage fund, highlighting the historical significance of the depot. Construction is slated to commence next spring and is anticipated to take approximately 18 months to complete.
+
+The project comes after years of advocacy by residents who believe the current library infrastructure is insufficient.  Critiques of the existing library centered primarily on its inadequate size and lack of space for community events. 
+
+The new library and workshop will boast a range of amenities designed to foster learning, creativity, and community engagement. Key features will include a spacious reading room, a dedicated &#39;makerspace&#39; equipped with 3D printers, and a café operated by a local social enterprise.  This plan aims to create a central hub for residents, promoting literacy, innovation, and social connection within Eastbrook.</td><td class="out">## Eastbrook Celebrates New Public Library &amp; Workshop Coming Soon
+
+**Eastbrook, [Country Name] –** The town council of Eastbrook unanimously voted on Monday to embark on a transformative project: the conversion of the old railway depot into a modern public library and community workshop. The Depot, which has sat vacant since the railway line&#39;s closure in 2009, will become a vital hub for the Eastbrook community.
+
+The project, estimated at a renovation cost of 4.2 million euros, will be funded largely by a regional heritage fund, allocating two thirds of the total cost to the initiative. Construction is anticipated to commence next spring and is projected to last approximately eighteen months.
+
+This development is a long-awaited victory for Eastbrook residents, who have championed the project for years.  Advocates argued compellingly that the existing library, while appreciating, is critically undersized and lacks adequate space to accommodate the town&#39;s growing needs – particularly for community events.
+
+The new library will feature a spacious reading room, a state-of-the-art makerspace equipped with 3D printers, and a café operated by a local social enterprise. This blended approach promises to foster learning, creativity, and community engagement, creating a thriving space for residents of all ages and backgrounds.  The council&#39;s decision marks a significant step towards enhancing Eastbrook’s cultural and educational resources.</td></tr><tr><td><code>sum02</code></td><td class="out">## Key Takeaways from Office Walk Study: Less Tired After Lunch, Minor Productivity Boost
+
+A recent study of 1,200 office workers suggests that brief lunchtime walks can improve energy levels in the afternoon. Researchers found that people who took a ten-minute walk after lunch reported feeling less tired compared to those who remained at their desks.
+
+The study tracked participants&#39; energy levels daily for four weeks, showing a noticeable difference between walkers and desk-bound employees. While participants who walked completed a *slightly* higher number of tasks, the observed difference in productivity wasn&#39;t statistically significant – meaning the researchers couldn&#39;t definitively say there was a causal link.
+
+The authors acknowledge a potential confounding factor. Because participants consciously chose to walk, individuals with higher energy levels may have been more inclined to participate. 
+
+Therefore, further research is being planned.  The researchers intend to conduct a randomized trial, likely involving participants who are randomly assigned to either walk during their lunch break or maintain their desk-bound routine, to better determine the true impact of lunchtime walking on productivity.
+
+**In essence:**
+
+*   **Improved Energy:** Walking after lunch was associated with lower afternoon fatigue.
+*   **Minor Productivity:** A small boost in task completion was observed, but not statistically significant.
+*   **Potential Confounding Factor:** Voluntary participation suggests pre-existing energy levels influenced the results.
+*   **Follow-up Research:** A randomized trial will further investigate the impact of lunchtime walking on productivity.</td><td class="out">## Article Summary: Lunchtime Walks Boost Afternoon Energy, But More Research Needed
+
+**Key Findings:** A study of 1,200 office workers found that taking a ten-minute walk after lunch was associated with lower afternoon fatigue levels. Workers who walked reported feeling less tired compared to those who stayed put at their desks. They also completed a few more tasks, although any productivity gains were small and not statistically significant.
+
+**Methodology:** The study tracked participants’ energy levels every hour for four weeks. They rated their energy on an hourly basis.
+
+**Limitations &amp; Conclusions:** Researchers acknowledge a possible confounding factor. Participants were free to choose whether or not to walk, meaning that more energetic individuals may be more inclined to opt for a midday stroll. The authors plan a randomized controlled trial to address this potential bias and further investigate the benefits of lunchtime walks.
+
+**Implications:** The study suggests that short walks during lunch breaks could be a simple way to combat afternoon fatigue, although further research is needed to confirm these findings and understand the underlying mechanisms.  The authors raise an important point about the role of individual energy levels influencing behavior, highlighting the need for a controlled experiment.</td></tr><tr><td><code>sum03</code></td><td class="out">## Bike-Sharing Scheme Soars to Record Levels Amidst Challenges
+
+**[City Name], [Date]** - The city&#39;s bike-sharing scheme achieved a record-breaking year, logging 3.1 million rides – a significant 40% increase over the previous year. The surge in popularity is being attributed to recent additions, including 800 new electric bikes and 60 docking stations strategically placed in outer neighbourhoods.
+
+According to the operator, the average ride length was a brisk 14 minutes, reflecting the service&#39;s appeal for convenient and efficient transportation. 
+
+However, the success has come with challenges. The company acknowledged significant financial losses due to vandalism and theft, estimated at nearly half a million euros. Additionally, some docking stations in the city centre frequently experience low occupancy during the morning rush.
+
+In response, the operator is implementing measures to address these issues. They plan to utilize trucks to more effectively redistribute bikes throughout the city and are experimenting with a discount program for riders who return bikes to understocked stations, aiming to alleviate congestion and encourage wider adoption.
+
+This year&#39;s record demonstrates the burgeoning appeal of bike-sharing in [City Name], fueled by innovative infrastructure and a strong desire for sustainable transportation. While challenges remain, the city&#39;s bike-sharing scheme appears poised to continue growing and evolving to meet the needs of its residents.</td><td class="out">## Bike-Sharing Scheme Soars, But Faces Challenges
+
+**City records record number of bike rides, but vandalism and uneven station utilization present hurdles.**
+
+The city&#39;s bike-sharing scheme celebrated its busiest year yet, racking up a staggering 3.1 million rides – a 40 percent increase from the previous year. The impressive growth is largely attributed to recent expansions, including the addition of 800 electric bikes and 60 new docking stations in outer neighbourhoods. 
+
+According to the transportation operator, riders are enjoying an average ride duration of 14 minutes.  
+
+However, the scheme isn&#39;t without its challenges. Vandalism and theft collectively cost the company nearly half a million euros, impacting rider confidence. Furthermore, the operator has noted that many central docking stations struggle with riders leaving bikes unattended during peak morning hours.
+
+In response, the city plans to increase the frequency of bike redistribution using trucks.  They are also experimenting with a discount incentive for riders who return bikes to designated understocked stations, aiming to improve station availability and reduce empty docks. The success of these initiatives remains to be seen, but represent an effort to address the scheme&#39;s current shortcomings.
+
+
+
+**Key takeaways:**
+
+* **Record Year:** Bike-sharing scheme reached 3.1 million rides (40% increase).
+* **Growth Drivers:** Addition of electric bikes &amp; new outer neighbourhood stations.
+* **Challenges:**  Vandalism/theft (€0.5 million cost), empty central stations during rush.
+* **Proposed Solutions:** Increased bike redistribution &amp; discount incentive for returning bikes to understocked stations.</td></tr><tr><td><code>sum04</code></td><td class="out">## A Bakery Embraces the Future: Switching to Solar Power and Revolutionizing Baking
+
+A small bakery in the harbour district has taken a bold step towards sustainability and cost-saving, installing a solar-powered oven system and battery storage after three years of successful testing. The owners report a significant drop in energy costs, estimating a reduction of approximately 30%, although the significant initial investment of 90,000 euros requires a roughly seven-year payback period.
+
+This transition hasn&#39;t been without challenges. Due to the differing heat profiles of electric ovens compared to gas, the bakery had to adapt its recipes. The chefs found that electric heat yielded a more even bake, resulting in a subtle change to the crust of their beloved rye bread. To ensure customers enjoyed the improved product, a blind tasting event was held, meticulously adjusting baking times to achieve optimal results. 
+
+The decision to embrace solar power demonstrates the bakery&#39;s commitment to both affordability and environmentally friendly practices. While the initial outlay is substantial, the projected long-term savings and evolving energy landscape likely position the bakery favorably for future prosperity.
+
+
+
+**Key Takeaways:**
+
+* **Transition:** The bakery successfully switched to all-electric ovens powered by rooftop solar and battery storage.
+* **Cost Savings:**  Reported 30% reduction in energy costs.
+* **Investment:** A significant upfront investment of 90,000 euros is required to reach payback in approximately seven years.
+* **Recipe Adaptation:**  Electric ovens necessitate recipe adjustments due to different heat profiles.
+* **Customer Feedback:** Blind tastings facilitated fine-tuning of baking times for optimum taste.
+* **Benefits:**  Demonstrates commitment to sustainability and long-term cost-effectiveness.</td><td class="out">## Local Bakery Embraces Eco-Friendly Baking with Solar Power
+
+**Harbour District -** After a three-year trial period, a small bakery nestled in the harbour district has made a significant shift to eco-friendly energy, replacing its gas-powered ovens with an electrically powered system fueled by rooftop solar panels and a battery. The change has resulted in significant cost savings, though requiring a substantial upfront investment.
+
+Bakery owner [Owner&#39;s Name] reports a roughly 30% reduction in energy costs, a compelling reason for the transition. The initial investment of 90,000 euros is estimated to take approximately seven years to recoup. 
+
+The transition wasn&#39;t without its challenges. The electric ovens offer more consistent heat distribution compared to gas ovens, requiring adjustments to existing recipes.  Notably, the signature rye bread experienced a slight change in crust due to the altered baking process. To ensure optimal results, regular customers participated in a blind tasting program to refine baking times.
+
+This move reflects a growing trend towards sustainable practices within the food industry and demonstrates a commitment to both affordability and environmental responsibility.</td></tr><tr><td><code>sum05</code></td><td class="out">## Article Summary: Amber Snow Warning Issued for Northern Hills
+
+**Key Takeaways:**
+
+* The National Weather Service has issued an Amber Warning for heavy snow in the northern hills, effective from Thursday evening through Saturday morning.
+* **Significant snowfall is expected:** Up to 30 centimeters of snow could fall on higher ground.
+* **Strong winds will exacerbate the situation:** Drifting is anticipated, further complicating travel.
+* **Travel will be disrupted:** Expect potential issues navigating roads.
+* **Rural communities may be isolated:** Some areas could be cut off.
+* **School closures are possible:** Schools will make decisions on Friday morning.
+* **Advice for Travelers:** Avoid unnecessary journeys. Carry blankets, water, and a charged phone if travel is unavoidable.
+
+
+
+Essentially, the article warns of dangerous winter conditions in the northern hills with significant snowfall and strong winds, urging caution and preparedness, especially for travel.</td><td class="out">## Amber Warning Issued for Heavy Snow in Northern Hills
+
+**[City, Date]** - The National Weather Service has issued an amber warning for heavy snow across the northern hills, effective Thursday evening through Saturday morning. Travelers and residents in affected areas should take precautions due to the significant snowfall and potential disruptions.
+
+Up to 30 centimetres of snow are expected to fall on higher ground, prompting concerns about strong winds and the formation of drifts. These conditions are likely to cause considerable travel disruption, potentially isolating rural communities for a period.
+
+Schools will be deciding on closures starting Friday morning, adding to the uncertainty for commuters and children alike. 
+
+The National Weather Service urges drivers to avoid unnecessary journeys and to equip themselves with essentials like blankets, water, and a fully charged phone if travel is unavoidable. The situation is expected to deteriorate rapidly, so vigilance and preparedness are strongly advised.
+
+
+
+**Key Takeaways:**
+
+* **Amber Warning Issued:** Heavy snow expected Thursday evening - Saturday morning.
+* **Significant Snowfall:** Up to 30 centimetres on higher ground.
+* **Wind &amp; Drifts:** Strong winds will exacerbate snowfall, creating drifts.
+* **Travel Disruption:** Likely delays and potential isolation of rural communities.
+* **School Closures:** Decisions to be made Friday morning.
+* **Precautions:** Avoid unnecessary travel, carry essentials like blankets, water, and charged phones.</td></tr><tr><td><code>sum06</code></td><td class="out">## Bird Census Reveals Record-Breaking Diversity at Lake Reserve, Mixed News for Insect-Dependent Species
+
+**[Location - if available]** - Volunteers at the Lake Reserve celebrated a significant victory this weekend, counting a remarkable 212 bird species during the annual census. This year&#39;s total surpasses all previous counts since the census began in 1995, highlighting a healthy biodiversity within the reserve.
+
+The census yielded exciting finds, including a pair of breeding ospreys – a rare occurrence for the lake, as the species hadn&#39;t nested there for over a century. Experts believe this resurgence is directly linked to successful ecosystem restoration.  The removal of invasive fish populations, which historically overshadowed birds&#39; food sources, coupled with the restoration of vital reed beds, has created a more favorable environment for a wide variety of birdlife.
+
+However, the survey wasn&#39;t without its cautions. A concerning trend persists in the declining numbers of swifts and house martins, a national concern linked to dwindling insect populations. These small birds rely heavily on insects for sustenance, suggesting broader ecological challenges are impacting their survival. 
+
+The high number of bird species counted at the Lake Reserve serves as a testament to the importance of habitat preservation and ecosystem restoration.  While the news isn&#39;t entirely positive, it underscores the need to address wider ecological issues affecting bird populations, especially those vulnerable to insect depletion.
+
+
+
+**Key Takeaways:**
+
+* **Record-Breaking Bird Diversity:** 212 species counted, highest ever in 1995.
+* **Osprey Breeding:**  A pair of breeding ospreys marks a historic resurgence at the Lake Reserve.
+* **Restoration Impact:** Reed beds and invasive fish removal contributing to increased bird species.
+* **Challenges Remain:** Decline in swifts and house martins linked to declining insect populations.</td><td class="out">## Bird Census Delivers Record High, But Some Species Still Struggling
+
+**Lake Reserve -** The annual weekend bird census at the lake reserve yielded a remarkable result: 212 species of birds, the highest tally since the census began in 1995. The survey highlights a significant recovery of certain avian populations, particularly the return of breeding ospreys after a century-long absence.
+
+This year&#39;s survey was attributed to the successful restoration of reed beds and the removal of invasive fish species. These efforts created a more favorable environment for birds, providing enhanced food sources and nesting habitats.
+
+However, the census wasn&#39;t without its concerns. The numbers of swallows (swifts and house martins) continued its downward trajectory, a concerning trend linked to the declining availability of insects, a national issue that is impacting many bird populations.
+
+The record-breaking number of bird species observed this year suggests a positive shift within the lake reserve ecosystem, but underscores the continued challenges facing many bird species in a rapidly changing world.</td></tr></tbody></table></div></details>
+</main>
+<div id="tip" role="status"></div>
+<script>
+(() => {
+  const tip = document.getElementById('tip');
+  const show = (el, x, y) => {
+    tip.replaceChildren();
+    const lines = JSON.parse(el.dataset.tip);
+    lines.forEach((line, i) => {
+      const row = document.createElement(i === 0 ? 'strong' : 'div');
+      row.textContent = line;
+      tip.appendChild(row);
+      if (i === 0) tip.appendChild(document.createElement('br'));
+    });
+    tip.style.display = 'block';
+    const r = tip.getBoundingClientRect();
+    tip.style.left = Math.min(x + 12, innerWidth - r.width - 8) + 'px';
+    tip.style.top = Math.max(8, y - r.height - 12) + 'px';
+  };
+  document.querySelectorAll('[data-tip]').forEach((el) => {
+    el.addEventListener('pointermove', (e) => show(el, e.clientX, e.clientY));
+    el.addEventListener('pointerleave', () => (tip.style.display = 'none'));
+    el.addEventListener('focus', () => { const r = el.getBoundingClientRect(); show(el, r.right, r.top); });
+    el.addEventListener('blur', () => (tip.style.display = 'none'));
+  });
+})();
+</script>
+</body>
+</html>

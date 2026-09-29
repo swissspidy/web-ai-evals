@@ -202,6 +202,35 @@ between two runs (drift) or between two browsers in one run
   calibration step: pick the best backend on this device from a small
   labeled set.
 
+## Verification log
+
+Everything below was run in a CPU-only Linux VM (4 cores, 16 GB) with Google
+Chrome installed.
+
+- **Milestone 1:** sentiment on the Prompt API in Playwright-launched Chrome 154
+  with a persistent profile.
+  - First run: Gemini Nano downloaded in 119 s; 40/40 examples OK; TTFT p50
+    1.44 s.
+  - Second run: availability `available`, no download, model loaded in 1.5 s.
+- **Milestone 2:** Gemini Nano, Chrome's Summarizer and Translator APIs, and
+  Transformers.js (Qwen2.5-0.5B on Wasm), all on the same four suites.
+  - WebLLM and Transformers.js WebGPU are implemented and report *unavailable*
+    (no WebGPU adapter). WebLLM on a SwiftShader adapter loses the device.
+  - Report: [`reports/2026-09-29-cpu`](reports/2026-09-29-cpu).
+- **Milestone 3:** `web-ai-evals nightly` on Chrome Stable 154 and Beta 155,
+  run on two consecutive "nights".
+  - Both channels ship v3Nano 2025.08.14.1358, and neither night flagged
+    anything.
+  - Run-to-run noise on identical setups: up to 0.036 ROUGE-L (6 summaries)
+    and 0.025 field accuracy (10 extractions).
+  - A simulated model-version change flags every affected cell and exits 2.
+  - Canary 156 couldn't install Nano here: Chrome requires 20 GB free, and
+    `doctor` shows that reason. Example output:
+    [`reports/nightly-example`](reports/nightly-example).
+- **Milestone 4:** promptfoo 0.123 → provider → Chrome → Gemini Nano,
+  [`example/nano-smoke.yaml`](integrations/promptfoo/example/nano-smoke.yaml)
+  passes 3/3. The Harbor assessment is in [docs/harbor.md](docs/harbor.md).
+
 ## CI
 
 - `.github/workflows/ci.yml` runs on GitHub-hosted runners. It covers
