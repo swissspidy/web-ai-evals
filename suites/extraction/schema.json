@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "description": "ISO date YYYY-MM-DD"
+    },
+    "city": {
+      "type": "string"
+    },
+    "guests": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "name",
+    "date",
+    "city",
+    "guests"
+  ],
+  "additionalProperties": false
+}

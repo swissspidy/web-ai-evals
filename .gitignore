@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.cache/
+results/*
+!results/.gitkeep
+reports/local/
+*.log
+.DS_Store

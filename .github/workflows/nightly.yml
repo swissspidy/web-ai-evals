@@ -1,0 +1,56 @@
+name: Nightly built-in AI drift
+
+# Runs on a self-hosted machine with a real GPU and Chrome Stable, Beta and
+# Canary installed (see docs/self-hosted-runner.md). Profiles and history live
+# on the runner so models are not re-downloaded and nights can be compared.
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      channels:
+        description: Comma-separated Chrome channels
+        default: chrome,chrome-beta,chrome-canary
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-gpu
+  cancel-in-progress: false
+
+jobs:
+  nightly:
+    runs-on: [self-hosted, gpu, web-ai-evals]
+    timeout-minutes: 120
+    env:
+      WAE_CHANNELS: ${{ inputs.channels || 'chrome,chrome-beta,chrome-canary' }}
+      WAE_HISTORY: ${{ vars.WAE_HISTORY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Run nightly suite and diff against the previous night
+        id: nightly
+        run: |
+          history="${WAE_HISTORY:-$HOME/web-ai-evals-history}"
+          pnpm wae nightly --config nightly.config.ts --history "$history" --fail-on-flags
+      - name: Collect this run's files
+        # Only files written by this run: if it failed before writing one, upload nothing
+        # rather than a previous night's report.
+        if: always() && steps.nightly.outputs.run-file != ''
+        env:
+          RUN_FILE: ${{ steps.nightly.outputs.run-file }}
+        run: |
+          mkdir -p nightly-out
+          cp "${RUN_FILE%.json}".* nightly-out/
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.nightly.outputs.run-file != ''
+        with:
+          name: nightly-${{ github.run_id }}
+          path: nightly-out/
+          retention-days: 30

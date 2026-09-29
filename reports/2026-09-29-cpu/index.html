@@ -1,0 +1,142 @@
+<title>Built-in AI vs In-Page Models</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; each suite is a three-column bench sheet (who | quality | latency) that stacks on phones. */
+:root {
+  --paper: #f5f6f4; --sheet: #fcfcfb; --ink: #15181b; --ink-2: #4f5559; --muted: #7d8387; --rule: #dfe1dd; --track: #eceeea; --accent: #1f5f8b;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #111315; --sheet: #1a1c1e; --ink: #f1f2f0; --ink-2: #c1c5c3; --muted: #8b9195; --rule: #2d3033; --track: #26292b; --accent: #7fb6de;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --paper: #111315; --sheet: #1a1c1e; --ink: #f1f2f0; --ink-2: #c1c5c3; --muted: #8b9195; --rule: #2d3033; --track: #26292b; --accent: #7fb6de;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767; color-scheme: dark; }
+body { background: var(--paper); color: var(--ink); font: 16px/1.55 var(--body); }
+main { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 40px 72px; }
+h1, h2 { font-family: var(--display); font-weight: 600; text-wrap: balance; letter-spacing: -0.01em; margin: 0; }
+h1 { font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.05; }
+h2 { font-size: 1.55rem; }
+p { max-width: 68ch; color: var(--ink-2); margin: 0; }
+small { color: var(--muted); font-size: 0.8rem; }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+a { color: var(--accent); }
+.eyebrow { font: 500 0.75rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.intro { display: grid; gap: 14px; margin-bottom: 28px; }
+.machine { display: flex; flex-wrap: wrap; gap: 6px 18px; font: 0.82rem/1.4 var(--mono); color: var(--ink-2); padding-block: 12px; border-block: 1px solid var(--rule); }
+.findings { display: grid; gap: 10px; margin: 28px 0 8px; padding: 0; list-style: none; counter-reset: f; }
+.findings li { display: grid; grid-template-columns: 2.2rem 1fr; gap: 8px; color: var(--ink-2); max-width: 78ch; }
+.findings li::before { counter-increment: f; content: counter(f, decimal-leading-zero); font: 500 0.8rem/1.7 var(--mono); color: var(--muted); }
+.findings strong { color: var(--ink); }
+.suite { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 22px 20px; margin-top: 22px; display: grid; gap: 16px; }
+.suite header { display: grid; gap: 6px; }
+.chart { display: grid; gap: 4px; }
+.crow { display: grid; grid-template-columns: minmax(170px, 1.1fr) 1fr 1fr; gap: 4px 22px; align-items: center; min-height: 3rem; }
+.col-head { font: 500 0.72rem/1.2 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); }
+.col-head span { display: block; text-transform: none; letter-spacing: 0; color: var(--muted); }
+.who, .bar-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.who span:last-child { display: grid; line-height: 1.25; }
+.key { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+.bar-track { flex: 1; height: 12px; background: var(--track); border-radius: 0 4px 4px 0; }
+.bar { height: 100%; border-radius: 0 4px 4px 0; }
+.bar-val { font: 500 0.85rem/1 var(--mono); font-variant-numeric: tabular-nums; min-width: 3.6rem; text-align: right; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+th, td { padding: 7px 8px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+th { font: 500 0.72rem/1.3 var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-2); white-space: nowrap; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td small { display: block; }
+.na { font-size: 0.85rem; color: var(--muted); }
+.notes { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); margin-top: 40px; }
+.notes > div { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.notes h2 { font-size: 1.2rem; }
+.notes p, .notes li { font-size: 0.92rem; }
+.notes ul { margin: 0; padding-left: 1.1rem; color: var(--ink-2); display: grid; gap: 4px; }
+pre { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 12px; overflow-x: auto; font: 0.8rem/1.5 var(--mono); margin: 0; }
+@media (max-width: 720px) {
+  .crow { grid-template-columns: 1fr 1fr; padding-block: 6px; border-bottom: 1px solid var(--rule); }
+  .crow .who { grid-column: 1 / -1; }
+  .chead > div:first-child { display: none; }
+  .bar-val { min-width: 3rem; }
+}
+</style>
+<main>
+<div class="intro">
+  <span class="eyebrow">web-ai-evals · first report · 2026-09-29</span>
+  <h1>Built-in AI vs in-page models, same prompts, same browser</h1>
+  <p>Four task suites run through Chrome's built-in Gemini Nano, Chrome's Summarizer and Translator APIs, and a Transformers.js model, all inside a real Chrome tab driven by Playwright. Every number below comes from one run on the machine listed here. The GPU backends from the comparison plan (Phi-4-mini in Edge, Gemma 3 via WebLLM and Transformers.js WebGPU) could not run there and are listed as not measured.</p>
+  <div class="machine"><span>Google Chrome 154.0.8037.57 (chrome, headful)</span><span>linux x64</span><span>Intel(R) Xeon(R) Processor @ 2.10GHz · 4 cores · 16 GiB</span><span>no GPU, no WebGPU adapter</span><span>v3Nano 2025.08.14.1358 · asset 2025.8.21.1028</span></div>
+</div>
+
+<ol class="findings">
+  <li><span><strong>Gemini Nano matches or beats a 0.5B in-page model on every suite</strong>: sentiment accuracy 0.900 vs 0.767, extraction field accuracy 1.000 vs 1.000, translation chrF 0.860 vs 0.496.</span></li>
+  <li><span><strong>It is also faster on CPU</strong>. Median time to first token 1.3 s vs 2.9 s on sentiment; a summary takes 5.9 s vs 53 s. Chrome's native CPU inference outruns ONNX Runtime Web's Wasm backend by a wide margin.</span></li>
+  <li><span><strong>Chrome's Summarizer API ignores <code>format: "plain-text"</code> on this build, and misbehaves with it.</strong> In tl;dr mode it returned a Markdown news article every time (12 of 12), averaging 242 words for ~100-word inputs, with invented placeholders such as “[Region Name]”. In key-points mode, 7 of 12 answers were bullet lists of <em>questions about</em> the article. Key points in Markdown format, the API default, looked right in a spot check. The Prompt API with a plain instruction scores ROUGE-L 0.319 against 0.143 for the Summarizer.</span></li>
+  
+  <li><span><strong>Gemma 3's q4 ONNX builds don't run on Transformers.js Wasm</strong> (ONNX Runtime Web lacks <code>GatherBlockQuantized</code> on Wasm), and WebLLM on a software WebGPU adapter loses the device. Browser AI on machines without a GPU is, in practice, built-in AI or a small model on Wasm.</span></li>
+</ol>
+
+<section class="suite" id="sentiment">
+  <header><h2>Sentiment classification</h2><p>60 short reviews and statements, three labels. 20 of them are hard: sarcasm, negation, litotes, mixed verdicts.</p></header>
+  <div class="chart">
+    <div class="crow chead"><div></div><div class="col-head">Accuracy <span>higher is better, 0–1</span></div><div class="col-head">Median latency per example <span>lower is better</span></div></div>
+    <div class="crow"><div class="who"><span class="key" style="background:var(--s1)"></span><span><strong>Gemini Nano</strong><small>Prompt API · Chrome built-in</small></span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:90.00%;background:var(--s1)"></div></div><span class="bar-val">0.900</span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:46.04%;background:var(--s1)"></div></div><span class="bar-val">1.3 s</span></div></div><div class="crow"><div class="who"><span class="key" style="background:var(--s2)"></span><span><strong>Qwen2.5 0.5B</strong><small>Transformers.js · Wasm · q4</small></span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:76.67%;background:var(--s2)"></div></div><span class="bar-val">0.767</span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:100.00%;background:var(--s2)"></div></div><span class="bar-val">2.9 s</span></div></div>
+  </div>
+  <div class="scroll"><table><thead><tr><th>Backend</th><th class="n">Accuracy</th><th class="n">Detail</th><th class="n">TTFT p50</th><th class="n">Latency p50</th><th class="n">Tokens/s p50</th><th class="n">OK</th></tr></thead><tbody><tr><td>Gemini Nano <small>Prompt API · Chrome built-in</small></td><td class="n">0.900</td><td class="n">macro-F1 0.900</td><td class="n">1.3 s</td><td class="n">1.3 s</td><td class="n">64.8</td><td class="n">60/60</td></tr><tr><td>Qwen2.5 0.5B <small>Transformers.js · Wasm · q4</small></td><td class="n">0.767</td><td class="n">macro-F1 0.766</td><td class="n">2.9 s</td><td class="n">2.9 s</td><td class="n">—</td><td class="n">60/60</td></tr></tbody></table></div>
+  <p class="na">Not measured on this machine: Gemma 3 1B (WebLLM · WebGPU · q4f16), Gemma 3 1B (Transformers.js · WebGPU · q4f16). No WebGPU adapter.</p>
+</section>
+<section class="suite" id="summarization">
+  <header><h2>Summarization</h2><p>12 news-style articles (90–120 words) against a one-to-two sentence reference summary.</p></header>
+  <div class="chart">
+    <div class="crow chead"><div></div><div class="col-head">ROUGE-L F1 <span>higher is better, 0–1</span></div><div class="col-head">Median latency per example <span>lower is better</span></div></div>
+    <div class="crow"><div class="who"><span class="key" style="background:var(--s1)"></span><span><strong>Gemini Nano</strong><small>Prompt API · Chrome built-in</small></span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:31.94%;background:var(--s1)"></div></div><span class="bar-val">0.319</span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:11.17%;background:var(--s1)"></div></div><span class="bar-val">5.9 s</span></div></div><div class="crow"><div class="who"><span class="key" style="background:var(--s2)"></span><span><strong>Qwen2.5 0.5B</strong><small>Transformers.js · Wasm · q4</small></span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:28.09%;background:var(--s2)"></div></div><span class="bar-val">0.281</span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:100.00%;background:var(--s2)"></div></div><span class="bar-val">53 s</span></div></div><div class="crow"><div class="who"><span class="key" style="background:var(--s3)"></span><span><strong>Summarizer API</strong><small>Chrome built-in · tl;dr mode</small></span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:14.31%;background:var(--s3)"></div></div><span class="bar-val">0.143</span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:51.13%;background:var(--s3)"></div></div><span class="bar-val">27 s</span></div></div><div class="crow"><div class="who"><span class="key" style="background:var(--s4)"></span><span><strong>Summarizer API</strong><small>Chrome built-in · key-points mode</small></span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:14.31%;background:var(--s4)"></div></div><span class="bar-val">0.143</span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:15.38%;background:var(--s4)"></div></div><span class="bar-val">8.1 s</span></div></div>
+  </div>
+  <div class="scroll"><table><thead><tr><th>Backend</th><th class="n">ROUGE-L F1</th><th class="n">Detail</th><th class="n">TTFT p50</th><th class="n">Latency p50</th><th class="n">Tokens/s p50</th><th class="n">OK</th></tr></thead><tbody><tr><td>Gemini Nano <small>Prompt API · Chrome built-in</small></td><td class="n">0.319</td><td class="n">44 words</td><td class="n">1.3 s</td><td class="n">5.9 s</td><td class="n">11.8</td><td class="n">12/12</td></tr><tr><td>Qwen2.5 0.5B <small>Transformers.js · Wasm · q4</small></td><td class="n">0.281</td><td class="n">65 words</td><td class="n">4.2 s</td><td class="n">53 s</td><td class="n">1.5</td><td class="n">12/12</td></tr><tr><td>Summarizer API <small>Chrome built-in · tl;dr mode</small></td><td class="n">0.143</td><td class="n">242 words</td><td class="n">1.1 s</td><td class="n">27 s</td><td class="n">12.5</td><td class="n">12/12</td></tr><tr><td>Summarizer API <small>Chrome built-in · key-points mode</small></td><td class="n">0.143</td><td class="n">71 words</td><td class="n">1.3 s</td><td class="n">8.1 s</td><td class="n">11.8</td><td class="n">12/12</td></tr></tbody></table></div>
+  <p class="na">Not measured on this machine: Gemma 3 1B (WebLLM · WebGPU · q4f16), Gemma 3 1B (Transformers.js · WebGPU · q4f16). No WebGPU adapter.</p>
+</section>
+<section class="suite" id="extraction">
+  <header><h2>Structured extraction</h2><p>20 restaurant booking requests to JSON with name, ISO date, city and party size.</p></header>
+  <div class="chart">
+    <div class="crow chead"><div></div><div class="col-head">Field accuracy <span>higher is better, 0–1</span></div><div class="col-head">Median latency per example <span>lower is better</span></div></div>
+    <div class="crow"><div class="who"><span class="key" style="background:var(--s1)"></span><span><strong>Gemini Nano</strong><small>Prompt API · Chrome built-in</small></span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:100.00%;background:var(--s1)"></div></div><span class="bar-val">1.000</span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:10.95%;background:var(--s1)"></div></div><span class="bar-val">4.0 s</span></div></div><div class="crow"><div class="who"><span class="key" style="background:var(--s2)"></span><span><strong>Qwen2.5 0.5B</strong><small>Transformers.js · Wasm · q4</small></span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:100.00%;background:var(--s2)"></div></div><span class="bar-val">1.000</span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:100.00%;background:var(--s2)"></div></div><span class="bar-val">36 s</span></div></div>
+  </div>
+  <div class="scroll"><table><thead><tr><th>Backend</th><th class="n">Field accuracy</th><th class="n">Detail</th><th class="n">TTFT p50</th><th class="n">Latency p50</th><th class="n">Tokens/s p50</th><th class="n">OK</th></tr></thead><tbody><tr><td>Gemini Nano <small>Prompt API · Chrome built-in</small></td><td class="n">1.000</td><td class="n">100% schema-valid</td><td class="n">1.1 s</td><td class="n">4.0 s</td><td class="n">14.1</td><td class="n">20/20</td></tr><tr><td>Qwen2.5 0.5B <small>Transformers.js · Wasm · q4</small></td><td class="n">1.000</td><td class="n">100% schema-valid</td><td class="n">4.2 s</td><td class="n">36 s</td><td class="n">1.4</td><td class="n">20/20</td></tr></tbody></table></div>
+  <p class="na">Not measured on this machine: Gemma 3 1B (WebLLM · WebGPU · q4f16), Gemma 3 1B (Transformers.js · WebGPU · q4f16). No WebGPU adapter.</p>
+</section>
+<section class="suite" id="translation">
+  <header><h2>Translation EN → DE</h2><p>20 everyday English sentences against a German reference translation.</p></header>
+  <div class="chart">
+    <div class="crow chead"><div></div><div class="col-head">chrF <span>higher is better, 0–1</span></div><div class="col-head">Median latency per example <span>lower is better</span></div></div>
+    <div class="crow"><div class="who"><span class="key" style="background:var(--s1)"></span><span><strong>Gemini Nano</strong><small>Prompt API · Chrome built-in</small></span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:86.04%;background:var(--s1)"></div></div><span class="bar-val">0.860</span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:16.18%;background:var(--s1)"></div></div><span class="bar-val">1.8 s</span></div></div><div class="crow"><div class="who"><span class="key" style="background:var(--s2)"></span><span><strong>Qwen2.5 0.5B</strong><small>Transformers.js · Wasm · q4</small></span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:49.65%;background:var(--s2)"></div></div><span class="bar-val">0.496</span></div><div class="bar-row"><div class="bar-track"><div class="bar" style="width:100.00%;background:var(--s2)"></div></div><span class="bar-val">11 s</span></div></div>
+  </div>
+  <div class="scroll"><table><thead><tr><th>Backend</th><th class="n">chrF</th><th class="n">Detail</th><th class="n">TTFT p50</th><th class="n">Latency p50</th><th class="n">Tokens/s p50</th><th class="n">OK</th></tr></thead><tbody><tr><td>Gemini Nano <small>Prompt API · Chrome built-in</small></td><td class="n">0.860</td><td class="n">35% contain the reference</td><td class="n">0.8 s</td><td class="n">1.8 s</td><td class="n">16.1</td><td class="n">20/20</td></tr><tr><td>Qwen2.5 0.5B <small>Transformers.js · Wasm · q4</small></td><td class="n">0.496</td><td class="n">0% contain the reference</td><td class="n">2.8 s</td><td class="n">11 s</td><td class="n">1.5</td><td class="n">20/20</td></tr></tbody></table></div>
+  <p class="na">Not measured on this machine: Gemma 3 1B (WebLLM · WebGPU · q4f16), Gemma 3 1B (Transformers.js · WebGPU · q4f16), Translator API (Chrome built-in). No WebGPU adapter.</p>
+</section>
+
+<div class="notes">
+  <div>
+    <h2>How it was measured</h2>
+    <ul>
+      <li>One browser, one backend, one example at a time; the model loads once per cell, from a persistent profile.</li>
+      <li>Timing happens inside the page with <code>performance.now()</code>. TTFT is the first streamed text; latency is the median wall time per example after the first.</li>
+      <li>Greedy decoding where the API allows it (temperature 0, 256 new tokens max). Web pages cannot set the Prompt API's temperature.</li>
+      <li>Scores average all examples; errors and timeouts count as 0.</li>
+    </ul>
+  </div>
+  <div>
+    <h2>What is missing</h2>
+    <p>Chrome's Translator API could not create an en→de translator in this setup (“The translation service count exceeded the limitation”), although the language pack shows as installed, so it has no score here.</p>
+    <p>Phi-4-mini needs Edge Dev or Canary on Windows or macOS with a GPU. Gemma 3 via WebLLM and Transformers.js WebGPU need a WebGPU adapter with <code>shader-f16</code>. The same config measures them on a GPU machine, and the report tool merges runs from several machines:</p>
+    <pre>pnpm wae run --config showcase.config.ts
+pnpm wae report results/cpu.json results/gpu.json</pre>
+  </div>
+  <div>
+    <h2>Data and code</h2>
+    <p>Datasets were written for this project and are CC0. Code is Apache-2.0. Run file: <span class="mono">2026-09-29T14-05-55-ef53a4</span>, schema version 1.</p>
+  </div>
+</div>
+</main>

@@ -1,0 +1,20 @@
+{"id": "ext01", "input": "Hi, this is Maria Keller. I'd like to book a table for 4 people in Lisbon on 2026-11-14, please.", "expected": {"name": "Maria Keller", "date": "2026-11-14", "city": "Lisbon", "guests": 4}}
+{"id": "ext02", "input": "Reservation request from Tom Okafor: party of two, Berlin, on 2026-10-03.", "expected": {"name": "Tom Okafor", "date": "2026-10-03", "city": "Berlin", "guests": 2}}
+{"id": "ext03", "input": "Can you reserve something in Oslo for 6 guests? Date is 2027-01-20. Name: Ingrid Solberg.", "expected": {"name": "Ingrid Solberg", "date": "2027-01-20", "city": "Oslo", "guests": 6}}
+{"id": "ext04", "input": "Priya Nair here — we'll be 3, visiting Madrid on 2026-12-05 and need a table.", "expected": {"name": "Priya Nair", "date": "2026-12-05", "city": "Madrid", "guests": 3}}
+{"id": "ext05", "input": "Booking for Lukas Brandt, Vienna, 2026-10-31, 8 persons (it's a birthday!).", "expected": {"name": "Lukas Brandt", "date": "2026-10-31", "city": "Vienna", "guests": 8}}
+{"id": "ext06", "input": "Hello! Sofia Rossi would like a table for five in Rome on 2027-02-14.", "expected": {"name": "Sofia Rossi", "date": "2027-02-14", "city": "Rome", "guests": 5}}
+{"id": "ext07", "input": "On 2026-11-02 in Dublin, we need seating for 1 — the name is Aoife Byrne.", "expected": {"name": "Aoife Byrne", "date": "2026-11-02", "city": "Dublin", "guests": 1}}
+{"id": "ext08", "input": "Party size: 7. City: Kraków. Date: 2026-12-19. Contact: Piotr Nowak.", "expected": {"name": "Piotr Nowak", "date": "2026-12-19", "city": "Kraków", "guests": 7}}
+{"id": "ext09", "input": "Hi there, Kenji Watanabe, table for 2 in Zurich on 2027-03-08, thanks.", "expected": {"name": "Kenji Watanabe", "date": "2027-03-08", "city": "Zurich", "guests": 2}}
+{"id": "ext10", "input": "Could we get a table for ten in Amsterdam on 2026-11-27? Ask for Emma de Vries.", "expected": {"name": "Emma de Vries", "date": "2026-11-27", "city": "Amsterdam", "guests": 10}}
+{"id": "ext11", "input": "I'm Omar Haddad and I'm bringing three friends to Paris on 2026-10-18, so four of us in total.", "expected": {"name": "Omar Haddad", "date": "2026-10-18", "city": "Paris", "guests": 4}}
+{"id": "ext12", "input": "Please book Copenhagen, 2027-01-09, for a couple. Name on the booking: Freja Holm.", "expected": {"name": "Freja Holm", "date": "2027-01-09", "city": "Copenhagen", "guests": 2}}
+{"id": "ext13", "input": "Carlos Mendes, 2026-12-31, Porto — table for 12 for New Year's Eve.", "expected": {"name": "Carlos Mendes", "date": "2026-12-31", "city": "Porto", "guests": 12}}
+{"id": "ext14", "input": "Hey, we are a group of 9 coming to Prague on 2027-04-22. My name is Jana Novotná.", "expected": {"name": "Jana Novotná", "date": "2027-04-22", "city": "Prague", "guests": 9}}
+{"id": "ext15", "input": "Table for three in Brussels on 2026-11-11 under the name Lucas Janssens.", "expected": {"name": "Lucas Janssens", "date": "2026-11-11", "city": "Brussels", "guests": 3}}
+{"id": "ext16", "input": "Name's Hannah Schmidt. Munich, 2027-05-01, six people please.", "expected": {"name": "Hannah Schmidt", "date": "2027-05-01", "city": "Munich", "guests": 6}}
+{"id": "ext17", "input": "Just me and my partner — so 2 — in Barcelona on 2026-10-25. It's Marta Puig.", "expected": {"name": "Marta Puig", "date": "2026-10-25", "city": "Barcelona", "guests": 2}}
+{"id": "ext18", "input": "Reservation: Edinburgh, 2027-02-02, party of 4, contact Callum Fraser.", "expected": {"name": "Callum Fraser", "date": "2027-02-02", "city": "Edinburgh", "guests": 4}}
+{"id": "ext19", "input": "Good morning, this is Elif Yılmaz. We'd like to dine in Istanbul on 2026-12-12, 5 guests.", "expected": {"name": "Elif Yılmaz", "date": "2026-12-12", "city": "Istanbul", "guests": 5}}
+{"id": "ext20", "input": "Anna Lindqvist, Stockholm, 2027-01-30. We are eleven people.", "expected": {"name": "Anna Lindqvist", "date": "2027-01-30", "city": "Stockholm", "guests": 11}}

@@ -1,0 +1,60 @@
+{"id": "s001", "input": "The battery easily lasts two full days and the screen is gorgeous.", "expected": "positive"}
+{"id": "s002", "input": "The zipper broke on the second day and the seller ignored my emails.", "expected": "negative"}
+{"id": "s003", "input": "The package arrived on Tuesday.", "expected": "neutral"}
+{"id": "s004", "input": "Our waiter remembered my allergy without being reminded. Lovely evening.", "expected": "positive"}
+{"id": "s005", "input": "We waited ninety minutes for cold soup. Never again.", "expected": "negative"}
+{"id": "s006", "input": "The restaurant is open from noon until ten, except on Mondays.", "expected": "neutral"}
+{"id": "s007", "input": "Setup took five minutes and it has worked flawlessly ever since.", "expected": "positive"}
+{"id": "s008", "input": "The app crashes every time I try to upload a photo.", "expected": "negative"}
+{"id": "s009", "input": "The phone comes in black, silver and green.", "expected": "neutral"}
+{"id": "s010", "input": "I laughed from start to finish; the cast has wonderful chemistry.", "expected": "positive"}
+{"id": "s011", "input": "Two hours of my life I will not get back; the plot made no sense.", "expected": "negative"}
+{"id": "s012", "input": "I watched the film on a Sunday afternoon with my brother.", "expected": "neutral"}
+{"id": "s013", "input": "Shipping was faster than promised and the packaging was plastic-free.", "expected": "positive"}
+{"id": "s014", "input": "The charger stopped working after a week and the replacement is also dead.", "expected": "negative"}
+{"id": "s015", "input": "The manual is available in English, German and French.", "expected": "neutral"}
+{"id": "s016", "input": "This is the most comfortable pair of running shoes I have ever owned.", "expected": "positive"}
+{"id": "s017", "input": "The room smelled of smoke and the air conditioning was broken.", "expected": "negative"}
+{"id": "s018", "input": "The store moved to a new address on Main Street last year.", "expected": "neutral"}
+{"id": "s019", "input": "The new update fixed every bug I reported. Great job, team!", "expected": "positive"}
+{"id": "s020", "input": "Terrible fit, cheap fabric, and returns cost more than the shirt.", "expected": "negative"}
+{"id": "s021", "input": "The laptop weighs 1.3 kilograms and has two USB-C ports.", "expected": "neutral"}
+{"id": "s022", "input": "Fresh pasta, generous portions and a very fair price.", "expected": "positive"}
+{"id": "s023", "input": "The update deleted all my saved playlists without warning.", "expected": "negative"}
+{"id": "s024", "input": "The meeting was rescheduled to Thursday at three.", "expected": "neutral"}
+{"id": "s025", "input": "The hotel staff upgraded our room for our anniversary. Unforgettable.", "expected": "positive"}
+{"id": "s026", "input": "Loud, overpriced and the fries were soggy.", "expected": "negative"}
+{"id": "s027", "input": "The course consists of twelve lessons of about twenty minutes each.", "expected": "neutral"}
+{"id": "s028", "input": "Crisp sound, deep bass, and the noise cancelling actually works on trains.", "expected": "positive"}
+{"id": "s029", "input": "The instructions are missing half the steps, so the shelf wobbles.", "expected": "negative"}
+{"id": "s030", "input": "The hotel is a ten-minute walk from the central station.", "expected": "neutral"}
+{"id": "s031", "input": "The tutorial was clear and I built my first app in an afternoon.", "expected": "positive"}
+{"id": "s032", "input": "My order arrived three weeks late and one item was missing.", "expected": "negative"}
+{"id": "s033", "input": "The recipe calls for two eggs and a cup of flour.", "expected": "neutral"}
+{"id": "s034", "input": "Five stars. The blender crushes ice like it is nothing.", "expected": "positive"}
+{"id": "s035", "input": "The subscription quietly renewed at double the price. Very disappointed.", "expected": "negative"}
+{"id": "s036", "input": "The app is available for Android and iOS.", "expected": "neutral"}
+{"id": "s037", "input": "A thoughtful, beautifully shot documentary that stayed with me for days.", "expected": "positive"}
+{"id": "s038", "input": "The sequel is a lazy copy of the first film with worse jokes.", "expected": "negative"}
+{"id": "s039", "input": "Customer support replied within an hour and solved the problem immediately.", "expected": "positive"}
+{"id": "s040", "input": "The keyboard keys started sticking within a month.", "expected": "negative"}
+{"id": "s041", "input": "Oh great, another update that makes the app slower. Just what I needed.", "expected": "negative", "meta": {"difficulty": "hard"}}
+{"id": "s042", "input": "I expected to hate it, but honestly it won me over by the second episode.", "expected": "positive", "meta": {"difficulty": "hard"}}
+{"id": "s043", "input": "Not bad at all for the price.", "expected": "positive", "meta": {"difficulty": "hard"}}
+{"id": "s044", "input": "The food was fine, nothing special, but the view was stunning.", "expected": "positive", "meta": {"difficulty": "hard"}}
+{"id": "s045", "input": "It works, I suppose, when it feels like it.", "expected": "negative", "meta": {"difficulty": "hard"}}
+{"id": "s046", "input": "I wouldn't say I disliked the hotel.", "expected": "neutral", "meta": {"difficulty": "hard"}}
+{"id": "s047", "input": "The first half is brilliant; the ending ruins everything.", "expected": "negative", "meta": {"difficulty": "hard"}}
+{"id": "s048", "input": "Delivery took exactly the three days stated on the website.", "expected": "neutral", "meta": {"difficulty": "hard"}}
+{"id": "s049", "input": "Could have been worse, could have been a lot better.", "expected": "neutral", "meta": {"difficulty": "hard"}}
+{"id": "s050", "input": "Never have I been so happy to return a product.", "expected": "negative", "meta": {"difficulty": "hard"}}
+{"id": "s051", "input": "Honestly? Worth every cent.", "expected": "positive", "meta": {"difficulty": "hard"}}
+{"id": "s052", "input": "The manual says to charge it overnight before first use.", "expected": "neutral", "meta": {"difficulty": "hard"}}
+{"id": "s053", "input": "I can't recommend this place enough.", "expected": "positive", "meta": {"difficulty": "hard"}}
+{"id": "s054", "input": "I can't recommend this place.", "expected": "negative", "meta": {"difficulty": "hard"}}
+{"id": "s055", "input": "Sure, it's 'waterproof' — until it rains.", "expected": "negative", "meta": {"difficulty": "hard"}}
+{"id": "s056", "input": "My kids haven't stopped playing with it since Christmas.", "expected": "positive", "meta": {"difficulty": "hard"}}
+{"id": "s057", "input": "The price went up by two euros this year.", "expected": "neutral", "meta": {"difficulty": "hard"}}
+{"id": "s058", "input": "Nothing about this phone is bad, but nothing is exciting either.", "expected": "neutral", "meta": {"difficulty": "hard"}}
+{"id": "s059", "input": "Ten out of ten, would get lost in this museum again.", "expected": "positive", "meta": {"difficulty": "hard"}}
+{"id": "s060", "input": "The seats were so uncomfortable that I left at the interval.", "expected": "negative", "meta": {"difficulty": "hard"}}

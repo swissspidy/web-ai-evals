@@ -1,0 +1,29 @@
+{
+  "name": "@web-ai-evals/page-runtime",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "Apache-2.0",
+  "main": "./index.node.js",
+  "types": "./index.node.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.node.d.ts",
+      "default": "./index.node.js"
+    }
+  },
+  "files": [
+    "dist",
+    "index.node.js",
+    "index.node.d.ts"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.3.0",
+    "@mlc-ai/web-llm": "^0.2.85",
+    "@web-ai-evals/core": "workspace:*",
+    "@webgpu/types": "^0.1.74"
+  }
+}
