@@ -1,8 +1,16 @@
 // Builds the published showcase page from one or more run files.
 //   node reports/build-showcase.mjs results/<run>.json [more.json] > reports/showcase/index.html
+// Emits a standalone HTML document (for GitHub Pages). --fragment omits the
+// document wrapper, for hosts that add their own (e.g. a claude.ai Artifact).
 import { readFileSync } from 'node:fs';
 
-const runs = process.argv.slice(2).map((f) => JSON.parse(readFileSync(f, 'utf8')));
+const args = process.argv.slice(2);
+const fragment = args.includes('--fragment');
+const runs = args.filter((a) => !a.startsWith('--')).map((f) => JSON.parse(readFileSync(f, 'utf8')));
+const wrap = (html) =>
+  fragment
+    ? html
+    : `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n${html.replace(/<main\b/, '</head>\n<body>\n<main')}\n</body>\n</html>\n`;
 const cells = runs.flatMap((r) => r.cells);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const sec = (ms) => (ms === undefined ? '—' : ms >= 10000 ? `${(ms / 1000).toFixed(0)} s` : `${(ms / 1000).toFixed(1)} s`);
@@ -51,7 +59,7 @@ function machineLine(r) {
 }
 
 if (!cells.some((c) => c.load.status === 'ok')) {
-  process.stdout.write(`<title>Built-in AI vs In-Page Models</title><main style="max-width:680px;margin:0 auto;padding:40px 16px;font:16px/1.5 system-ui,sans-serif"><h1>No results</h1><p>No backend loaded in ${runs.length} run(s): ${esc(cells.map((c) => `${c.backend.id}: ${c.load.error ?? c.load.status}`).slice(0, 12).join('; '))}</p></main>`);
+  process.stdout.write(wrap(`<title>Built-in AI vs In-Page Models</title><main style="max-width:680px;margin:0 auto;padding:40px 16px;font:16px/1.5 system-ui,sans-serif"><h1>No results</h1><p>No backend loaded in ${runs.length} run(s): ${esc(cells.map((c) => `${c.backend.id}: ${c.load.error ?? c.load.status}`).slice(0, 12).join('; '))}</p></main>`));
   process.exit(0);
 }
 
@@ -131,7 +139,8 @@ const html = `<title>Built-in AI vs In-Page Models</title>
 :root[data-theme="dark"] {
   --paper: #111315; --sheet: #1a1c1e; --ink: #f1f2f0; --ink-2: #c1c5c3; --muted: #8b9195; --rule: #2d3033; --track: #26292b; --accent: #7fb6de;
   --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767; color-scheme: dark; }
-body { background: var(--paper); color: var(--ink); font: 16px/1.55 var(--body); }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.55 var(--body); }
+*, *::before, *::after { box-sizing: border-box; }
 main { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 40px 72px; }
 h1, h2 { font-family: var(--display); font-weight: 600; text-wrap: balance; letter-spacing: -0.01em; margin: 0; }
 h1 { font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.05; }
@@ -220,4 +229,4 @@ pnpm wae report results/cpu.json results/gpu.json</pre>
   </div>
 </div>
 </main>`;
-process.stdout.write(html);
+process.stdout.write(wrap(html));

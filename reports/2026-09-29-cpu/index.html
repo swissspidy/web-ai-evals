@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Built-in AI vs In-Page Models</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -16,7 +21,8 @@
 :root[data-theme="dark"] {
   --paper: #111315; --sheet: #1a1c1e; --ink: #f1f2f0; --ink-2: #c1c5c3; --muted: #8b9195; --rule: #2d3033; --track: #26292b; --accent: #7fb6de;
   --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767; color-scheme: dark; }
-body { background: var(--paper); color: var(--ink); font: 16px/1.55 var(--body); }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.55 var(--body); }
+*, *::before, *::after { box-sizing: border-box; }
 main { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 40px 72px; }
 h1, h2 { font-family: var(--display); font-weight: 600; text-wrap: balance; letter-spacing: -0.01em; margin: 0; }
 h1 { font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.05; }
@@ -64,6 +70,8 @@ pre { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6p
   .bar-val { min-width: 3rem; }
 }
 </style>
+</head>
+<body>
 <main>
 <div class="intro">
   <span class="eyebrow">web-ai-evals · first report · 2026-09-29</span>
@@ -140,3 +148,5 @@ pnpm wae report results/cpu.json results/gpu.json</pre>
   </div>
 </div>
 </main>
+</body>
+</html>
