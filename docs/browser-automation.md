@@ -1,0 +1,108 @@
+# Automating built-in AI with Playwright
+
+What it takes to run Chrome's built-in AI (Prompt API, Summarizer, Translator,
+…) from Playwright, and what the runner does for you. Verified with
+Google Chrome 154.0.8037.57 on Linux (Ubuntu 24.04) and Playwright 1.63,
+September 2026.
+
+## Use branded Chrome, with a persistent profile
+
+- Gemini Nano is delivered by Chrome's **component updater**. Playwright's
+  bundled Chromium (and Chrome for Testing) doesn't have it, so launch Google
+  Chrome with `channel: 'chrome' | 'chrome-beta' | 'chrome-dev' | 'chrome-canary'`.
+  Edge uses `msedge*` channels.
+- The model (about 4 GB) lives in the profile directory under
+  `OptGuideOnDeviceModel/<version>/`. The runner keeps one persistent profile
+  per browser id, by default in `~/.cache/web-ai-evals/profiles/<id>`, so the
+  download happens once.
+- In-page runtimes cache per origin (Cache API, IndexedDB, OPFS). The runner
+  therefore serves the page runtime from a **fixed origin**,
+  `http://127.0.0.1:47831`. Changing the port throws away the WebLLM and
+  Transformers.js caches.
+
+## Playwright's default switches break built-in AI
+
+Playwright launches Chromium with switches that are sensible for web testing but
+fatal here. `packages/runner/src/browsers.ts` removes them with
+`ignoreDefaultArgs` and re-adds the harmless part:
+
+| Default switch | Effect on built-in AI |
+|---|---|
+| `--disable-features=…,OptimizationHints,Translate,…` | Disables the on-device model service. `LanguageModel.create()` fails with *"Unable to create a text session because the service is not running"* and `chrome://on-device-internals` stays at *"Device performance class: Loading…"*. |
+| `--disable-component-update` | The model component is never downloaded. |
+| `--disable-background-networking` | The model manifest isn't fetched. |
+| `--disable-field-trial-config` | Removed so the browser behaves like a user's install. |
+| `--disable-extensions` | Blocks extension polyfills, such as WebAI Studio's `Classifier`. |
+
+Chrome uses the last occurrence of a switch. The runner's own
+`--disable-features=` and `--enable-features=` are appended after Playwright's
+defaults, so they win.
+
+## User activation
+
+`LanguageModel.create()` (and `Summarizer.create()` and the others) needs
+transient user activation while the model is `downloadable` or `downloading`.
+The page runtime has a `#wae-activate` button. The runner arms a load, then
+clicks the button with a trusted Playwright click, so downloads start without
+a human.
+
+## Model version
+
+JavaScript can't read the built-in model version. The runner reads it from
+the profile:
+
+- `OptGuideOnDeviceModel/<component version>/manifest.json`: the
+  `BaseModelSpec` field holds the base model name and version, for example
+  `v3Nano` and `2025.08.14.1358`.
+- `Local State` → `optimization_guide.on_device`: the performance class, VRAM
+  and the requested asset, for example
+  `nano_v3_cpu_component 2025.8.21.1028`.
+
+All of this is recorded in `environment.backend` for every cell. Run diffs
+flag changes to it.
+
+## CPU-only machines
+
+Chrome can run Gemini Nano on the CPU when the device has **at least 16 GB RAM
+and at least 4 cores**. On a machine without a usable GPU, Chrome may still
+pick the GPU asset. The model process then crashes, and after a few crashes
+Chrome blocks the version: *"The model process crashed too many times for this
+version"*.
+
+Enable the `force-cpu` preset (`--enable-features=OnDeviceModelForceCpuBackend`)
+on such machines. Chrome then downloads the CPU asset (`nano_v3_cpu_component`)
+and runs on the CPU. The crash counter is stored in `Local State` at
+`optimization_guide.on_device.model_crash_count`. Reset it with the button in
+`chrome://on-device-internals` → Broker State, or delete the profile.
+
+Measured on a 4-core Xeon VM with 16 GB RAM and no GPU (Chrome 154, CPU
+backend):
+
+- Loading from the profile takes about 1.5 to 3 s.
+- The first download took about 2 minutes.
+- Sentiment classification takes about 1.4 s TTFT per example.
+
+## Headless
+
+Headful is the default because that's how users run the APIs. Headless results
+are recorded with `browser.headless: true`, so they stay separate in reports
+and diffs. See the README for the current headless status.
+
+## Networks with TLS-intercepting proxies
+
+The runner passes `$HTTPS_PROXY` to the browser; set `proxy: false` to disable
+that. Chrome on Linux trusts only its NSS store (`~/.pki/nssdb`), not the
+system CA bundle, so a proxy CA has to be added there with
+`certutil -A -d sql:$HOME/.pki/nssdb -n <name> -t C,, -i ca.crt`. The
+component updater only works through proxies that allow HTTPS `CONNECT`.
+
+## Debugging
+
+- `web-ai-evals doctor --config <file>` prints the WebGPU adapter, the built-in
+  AI globals and each backend's availability for every browser in a config.
+- `chrome://on-device-internals` shows the device performance class, the
+  manifest criteria (VRAM, disk, RAM), asset download progress and the reason
+  a use case is unavailable. On Chrome 154 it has to be enabled first from
+  `chrome://chrome-urls`.
+- `DEBUG=pw:browser` shows Chrome's stderr. Add
+  `--enable-logging=stderr --v=1` to the browser `args` for more detail.

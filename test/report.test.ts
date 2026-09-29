@@ -74,3 +74,20 @@ describe('rendering', () => {
     expect(renderMarkdown([run('a', [cell('chrome', '154', 'v1', 1, 100)])])).toContain('| nano |');
   });
 });
+
+describe('latestRun', () => {
+  it('finds the newest run with the same config name', async () => {
+    const { mkdtemp, writeFile } = await import('node:fs/promises');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    const { latestRun } = await import('@web-ai-evals/runner');
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'wae-hist-'));
+    const mk = (id: string, name: string) => ({ ...run(id, [cell('chrome', '154', 'v1', 1, 100)]), name });
+    await writeFile(path.join(dir, '2026-09-01.json'), JSON.stringify(mk('old', 'n')));
+    await writeFile(path.join(dir, '2026-09-02.json'), JSON.stringify(mk('mid', 'n')));
+    await writeFile(path.join(dir, '2026-09-03.json'), JSON.stringify(mk('other', 'x')));
+    await writeFile(path.join(dir, '2026-09-04.json'), JSON.stringify(mk('new', 'n')));
+    expect((await latestRun(dir, 'n', path.join(dir, '2026-09-04.json')))?.run.runId).toBe('mid');
+    expect((await latestRun(dir, 'x'))?.run.runId).toBe('other');
+  });
+});

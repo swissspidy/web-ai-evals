@@ -50,14 +50,32 @@ export async function startRuntimeServer(port: number, root = pageRuntimeDir): P
       res.writeHead(404).end('not found');
     }
   });
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(port, '127.0.0.1', () => resolve());
-  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(port, '127.0.0.1', () => resolve());
+    });
+  } catch (err) {
+    // Another web-ai-evals process already serves the runtime on this port (same origin,
+    // same model caches): share it rather than fail.
+    if ((err as NodeJS.ErrnoException).code === 'EADDRINUSE' && (await isRuntime(port))) {
+      return { url: `http://127.0.0.1:${port}/`, close: async () => {} };
+    }
+    throw err;
+  }
   const address = server.address();
   const actualPort = typeof address === 'object' && address ? address.port : port;
   return {
     url: `http://127.0.0.1:${actualPort}/`,
     close: () => new Promise((resolve) => server.close(() => resolve())),
   };
+}
+
+async function isRuntime(port: number): Promise<boolean> {
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(2000) });
+    return res.ok && (await res.text()).includes('web-ai-evals page runtime');
+  } catch {
+    return false;
+  }
 }

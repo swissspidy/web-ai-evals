@@ -6,3 +6,4 @@ export * from './scoring.js';
 export * from './server.js';
 export * from './session.js';
 export { TOOL } from './version.js';
+export * from './nightly.js';

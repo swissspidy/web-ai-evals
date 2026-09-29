@@ -1,0 +1,49 @@
+name: Nightly built-in AI drift
+
+# Runs on a self-hosted machine with a real GPU and Chrome Stable, Beta and
+# Canary installed (see docs/self-hosted-runner.md). Profiles and history live
+# on the runner so models are not re-downloaded and nights can be compared.
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      channels:
+        description: Comma-separated Chrome channels
+        default: chrome,chrome-beta,chrome-canary
+
+concurrency:
+  group: nightly-gpu
+  cancel-in-progress: false
+
+jobs:
+  nightly:
+    runs-on: [self-hosted, gpu, web-ai-evals]
+    timeout-minutes: 120
+    env:
+      WAE_CHANNELS: ${{ inputs.channels || 'chrome,chrome-beta,chrome-canary' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Run nightly suite and diff against the previous night
+        run: |
+          history="${WAE_HISTORY:-$HOME/web-ai-evals-history}"
+          echo "WAE_HISTORY_DIR=$history" >> "$GITHUB_ENV"
+          pnpm wae nightly --config nightly.config.ts --history "$history" --fail-on-flags
+      - name: Collect this run's files
+        if: always()
+        run: |
+          mkdir -p nightly-out
+          latest="$(ls -t "$WAE_HISTORY_DIR"/*.json 2>/dev/null | head -1)"
+          [ -n "$latest" ] && cp "${latest%.json}".* nightly-out/ || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-${{ github.run_id }}
+          path: nightly-out/
+          retention-days: 30

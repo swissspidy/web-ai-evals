@@ -3,9 +3,27 @@
   "version": "0.1.0",
   "type": "module",
   "license": "Apache-2.0",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
-  "files": ["dist"],
-  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit" }
+  "main": "./dist/provider.js",
+  "types": "./dist/provider.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/provider.d.ts",
+      "default": "./dist/provider.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "description": "Promptfoo provider that runs prompts through in-browser AI backends (Prompt API, WebLLM, Transformers.js)",
+  "dependencies": {
+    "@web-ai-evals/core": "workspace:*",
+    "@web-ai-evals/runner": "workspace:*"
+  },
+  "devDependencies": {
+    "promptfoo": "^0.123.1"
+  }
 }

@@ -1,0 +1,240 @@
+# web-ai-evals
+
+**Run and compare LLM evals inside real browsers.**
+
+Web AI runs in the browser:
+
+- built-in AI in Chrome and Edge (Prompt API, Summarizer, Writer, Rewriter,
+  Translator, Classifier)
+- WebLLM
+- Transformers.js on WebGPU and Wasm
+
+Quality and speed depend on the browser, the backend, quantization and the
+hardware. Built-in models also change silently with browser updates.
+
+Existing eval tools don't run models in a browser. web-ai-evals is the
+browser execution environment for evals:
+- It runs the same dataset across backends and browsers on real hardware.
+- It measures quality and browser-only metrics side by side.
+- It records the full environment, so results are comparable and drift is
+  visible.
+
+```
+suite (JSONL) × backends × browsers  ──►  results/<runId>.json  ──►  HTML report / diff
+```
+
+## Status
+
+| Backend | Adapter | Verified end to end |
+|---|---|---|
+| Prompt API (Gemini Nano, Chrome) | `prompt-api` | ✅ Chrome 154 Stable, Linux, CPU backend |
+| Prompt API (Phi-4-mini, Edge) | `prompt-api` | ⚠️ needs Edge Dev/Canary on Windows/macOS with a GPU |
+| Summarizer / Writer / Rewriter | `summarizer`, `writer`, `rewriter` | ✅ Summarizer on Chrome 154; Writer/Rewriter need the `writing-apis` flag preset |
+| Translator | `translator` | ✅ Chrome 154 |
+| Classifier (WebAI Studio extension polyfill) | `classifier` | ⚠️ needs the extension installed in the profile |
+| WebLLM | `webllm` | ⚠️ needs a WebGPU adapter; SwiftShader loses the device |
+| Transformers.js WebGPU | `transformers` + `device: webgpu` | ⚠️ needs a WebGPU adapter with `shader-f16` for q4f16 |
+| Transformers.js Wasm | `transformers` + `device: wasm` | ✅ Chrome 154 (Qwen2.5-0.5B q4) |
+| Mock (deterministic, for tests) | `mock` | ✅ CI |
+
+"✅" means a full run in this repository's development environment: a 4-core
+Linux VM with 16 GB RAM and **no GPU**. GPU backends are implemented against
+the current APIs and report "unavailable" with a reason when the device can't
+run them. See [the first report](#first-report) and
+[docs/browser-automation.md](docs/browser-automation.md).
+
+## Quick start
+
+Requires Node 22.18+ (for native TypeScript configs), pnpm, and Google Chrome.
+
+```sh
+pnpm install
+pnpm build
+
+# What can this machine run?
+pnpm wae doctor --config showcase.config.ts
+
+# Milestone 1: sentiment on Gemini Nano (Prompt API) in Chrome
+pnpm wae run --config evals.config.ts
+
+# Everything: built-in AI vs WebLLM vs Transformers.js on four suites
+pnpm wae run --config showcase.config.ts
+```
+
+Each run writes `results/<runId>.json` and `results/<runId>.html`.
+
+The first run downloads the models into persistent profiles under
+`~/.cache/web-ai-evals/profiles/`; later runs reuse them. On a machine without
+a supported GPU, set `WAE_FORCE_CPU=1` to run Gemini Nano on Chrome's CPU
+backend. That needs 16 GB RAM and 4 cores.
+
+## Configuration
+
+```ts
+// evals.config.ts
+import { defineConfig } from '@web-ai-evals/runner';
+import { classification } from '@web-ai-evals/scorers';
+
+export default defineConfig({
+  name: 'sentiment',
+  browsers: ['chrome', 'chrome-canary', { id: 'edge', channel: 'msedge-dev' }],
+  backends: [
+    { id: 'gemini-nano', kind: 'prompt-api', browsers: ['chrome', 'chrome-canary'] },
+    { id: 'phi-4-mini', kind: 'prompt-api', browsers: ['edge'] },
+    { id: 'gemma-webllm', kind: 'webllm', model: 'gemma3-1b-it-q4f16_1-MLC' },
+    { id: 'gemma-tjs', kind: 'transformers', model: 'onnx-community/gemma-3-1b-it-ONNX-GQA', device: 'webgpu', dtype: 'q4f16' },
+  ],
+  suites: [
+    {
+      id: 'sentiment',
+      dataset: './suites/sentiment/data.jsonl',
+      task: { type: 'classify', labels: ['positive', 'negative', 'neutral'] },
+      scorers: [classification()],
+    },
+  ],
+  run: { timeoutMs: 120_000, retries: 1, repeats: 1, coldStarts: 0 },
+});
+```
+
+**Datasets** are JSONL files. Each line is
+`{"id", "input", "expected"?, "meta"?}`. `input` is either a string or an object
+`{ text, context?, sourceLanguage?, targetLanguage?, labels?, schema? }`.
+
+**The task** decides how a backend is called:
+- *Chat models* (Prompt API, WebLLM, Transformers.js) get a prompt rendered
+  from the task's template.
+- *Task APIs* (Summarizer, Translator, …) get the text directly.
+
+So one dataset can drive both kinds of backend. Task types: `generate`,
+`summarize`, `write`, `rewrite`, `translate`, `classify` and `extract`.
+
+**Scorers** come from `@web-ai-evals/scorers`:
+
+| Scorer | What it measures |
+|---|---|
+| `exactMatch` | Exact match |
+| `contains` | Output contains the expected text |
+| `regex` | Output matches a pattern |
+| `rougeL` | Summarization overlap |
+| `chrF` | Translation overlap |
+| `jsonValid` | Output is valid JSON |
+| `jsonSchema` | Output matches a JSON schema |
+| `jsonFieldMatch` | Share of expected fields that match |
+| `classification` | Accuracy, macro-F1 and invalid-label rate |
+| `embeddingSimilarity` | Similarity via a Transformers.js embedder in Node |
+| `llmJudge` | LLM-as-judge (Anthropic or an OpenAI-compatible API); the key is read from the environment |
+| `custom(name, fn)` | Your own scoring function |
+
+Scoring runs in Node, so API keys never reach the page. To apply new scorers to
+an existing run without launching a browser, run `web-ai-evals rescore`.
+
+**Browser presets** turn on Chrome flags:
+
+| Preset | Effect |
+|---|---|
+| `force-cpu` | Runs Gemini Nano on the CPU backend |
+| `writing-apis` | Enables Writer, Rewriter and Proofreader |
+| `sampling-mode` | Enables `samplingMode` on the Prompt API |
+| `unsafe-webgpu` | Enables WebGPU on Linux and software adapters |
+
+## Metrics
+
+Recorded for each example:
+
+- output
+- per-scorer score
+- **time to first token**: the first streamed non-empty chunk
+- **total latency**
+- **tokens/second**: decode rate after the first token; `tokenCountSource`
+  says whether the count was reported by the backend, re-tokenized, or taken
+  from chunk counts
+- status (`ok`, `error`, `timeout` or `unavailable`) and attempts
+- JS heap
+
+Recorded for each cell (suite × backend × browser):
+
+- availability before loading and whether a download happened
+- **cold start** (load time); `run.coldStarts` adds repeated cold starts, each
+  in a fresh page
+- the first example is tagged `cold`, later ones `warm`
+- the **environment**:
+  - browser name, channel and version (full version list), headless or not
+  - OS, CPU, cores, RAM
+  - WebGPU adapter info and features
+  - backend, model id, dtype and device
+  - built-in model version read from the profile (e.g. `v3Nano 2025.08.14.1358`)
+  - flags
+
+Summaries count failed examples as 0, so a backend can't look better by
+failing the hard ones.
+
+The full schema is in [ADR 0001](docs/adr/0001-architecture.md) and
+[packages/core/src/types.ts](packages/core/src/types.ts).
+
+## CLI
+
+```
+web-ai-evals run      --config <file> [--browsers a,b] [--backends a,b] [--suites a,b] [--limit N]
+web-ai-evals doctor   --config <file>                     # environment + availability per backend
+web-ai-evals report   <run.json...> [--out r.html]        # merge runs from several machines into one report
+web-ai-evals diff     <before.json> [after.json] [--browsers chrome:chrome-canary] [--fail-on-flags]
+web-ai-evals nightly  --config nightly.config.ts --history <dir> [--fail-on-flags]
+web-ai-evals rescore  --config <file> <run.json>
+web-ai-evals serve                                         # serve the page runtime for manual debugging
+```
+
+`diff` flags changes to the built-in model version, scores that move by at
+least 0.05, and latency or throughput that changes by ×1.5 or more. It works
+between two runs (drift) or between two browsers in one run
+(Stable vs Canary).
+
+## Integrations
+
+- **Promptfoo:** [`integrations/promptfoo`](integrations/promptfoo) is a custom
+  provider. Each promptfoo prompt goes through a backend in a real browser and
+  comes back with `latencyMs`, token usage and `metadata.ttftMs` /
+  `tokensPerSecond`.
+- **Harbor:** assessed in [docs/harbor.md](docs/harbor.md). A browser
+  *environment* is possible but a poor fit. The better route is a model bridge,
+  which is documented as a follow-up.
+- **Programmatic / Belay:** `BrowserSession` opens a browser, loads a backend
+  and runs requests. [`examples/calibrate.ts`](examples/calibrate.ts) shows a
+  calibration step: pick the best backend on this device from a small
+  labeled set.
+
+## CI
+
+- `.github/workflows/ci.yml` runs on GitHub-hosted runners. It covers
+  typecheck, unit tests, and an end-to-end run with the mock backend in
+  headless Chromium plus the Promptfoo provider.
+- `.github/workflows/nightly.yml` runs on a **self-hosted GPU machine** (a Mac
+  mini is ideal). It runs a small suite on Chrome Stable, Beta and Canary and
+  fails when the built-in model or its quality changes. Setup is in
+  [docs/self-hosted-runner.md](docs/self-hosted-runner.md).
+
+## Packages
+
+| Package | Role |
+|---|---|
+| `@web-ai-evals/core` | Types, JSONL datasets, prompt templates, stats |
+| `@web-ai-evals/page-runtime` | In-page runner: backend adapters, availability, download progress, timing |
+| `@web-ai-evals/runner` | Node orchestrator and CLI: Playwright, persistent profiles, server, retries and timeouts |
+| `@web-ai-evals/scorers` | Scorers |
+| `@web-ai-evals/report` | HTML report, run diffs, Markdown summaries |
+| `@web-ai-evals/promptfoo` | Promptfoo provider |
+
+## First report
+
+See [reports/README.md](reports/README.md).
+
+## Licenses
+
+- Code: Apache-2.0.
+- Datasets in `suites/`: written for this project, CC0-1.0.
+- Models are downloaded from their publishers at run time and never
+  redistributed. Their own terms apply:
+  - Gemini Nano: Google's Generative AI Prohibited Use Policy and the Chrome
+    terms
+  - Phi-4-mini: MIT
+  - Gemma: the Gemma Terms of Use
+  - Qwen2.5: Apache-2.0

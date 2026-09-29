@@ -1,0 +1,20 @@
+# Gemini Nano (Chrome Prompt API) vs a Transformers.js model, through promptfoo.
+# Needs Google Chrome on a device that supports Gemini Nano.
+description: Built-in AI vs Transformers.js
+prompts:
+  - "Classify the sentiment of this review as positive, negative or neutral. Reply with one word.\n\nReview: {{review}}"
+providers:
+  - id: file://../dist/provider.js
+    label: gemini-nano
+    config:
+      browser: { channel: chrome, presets: [] }
+      backend: { kind: prompt-api }
+  - id: file://../dist/provider.js
+    label: qwen2.5-0.5b-wasm
+    config:
+      browser: { channel: chrome }
+      backend: { kind: transformers, model: onnx-community/Qwen2.5-0.5B-Instruct, device: wasm, dtype: q4, generation: { maxTokens: 8 } }
+defaultTest:
+  options:
+    transform: output.trim().toLowerCase().replace(/[^a-z]/g, '')
+tests: file://../../../suites/sentiment/promptfoo-tests.yaml

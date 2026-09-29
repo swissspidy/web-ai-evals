@@ -119,6 +119,7 @@ export async function runEvals(config: ResolvedConfig, options: RunEvalsOptions 
         for (const loaded of suites) {
           for (const spec of backendsFor(config, loaded.suite, filter).filter((b) => !b.browsers || b.browsers.includes(browser.id))) {
             const cell = await runCell(session, config, loaded, spec, log);
+            if (!cell) continue;
             run.cells.push(cell);
             await save();
             options.onCell?.(cell, run);
@@ -141,10 +142,16 @@ export async function runCell(
   loaded: LoadedSuite,
   spec: BackendSpec,
   log: (msg: string) => void,
-): Promise<CellResult> {
+): Promise<CellResult | undefined> {
   const { suite, examples, byId } = loaded;
   const task = suite.task;
   const key = `${suite.id}/${spec.id}/${session.options.browser.id}`;
+  // A task API that cannot do this task at all (e.g. Translator on summarization) is not a result.
+  const pre = await session.availability(spec, task);
+  if (pre.availability === 'unavailable' && pre.reason?.includes('does not support task')) {
+    log(`- ${key}: skipped (${pre.reason})`);
+    return undefined;
+  }
   log(`▶ ${key}: ${examples.length} examples`);
   const opts = config.run;
 

@@ -1,0 +1,361 @@
+# Generated from data.jsonl for promptfoo (CC0-1.0).
+- description: s001
+  vars:
+    review: "The battery easily lasts two full days and the screen is gorgeous."
+  assert:
+    - type: equals
+      value: positive
+- description: s002
+  vars:
+    review: "The zipper broke on the second day and the seller ignored my emails."
+  assert:
+    - type: equals
+      value: negative
+- description: s003
+  vars:
+    review: "The package arrived on Tuesday."
+  assert:
+    - type: equals
+      value: neutral
+- description: s004
+  vars:
+    review: "Our waiter remembered my allergy without being reminded. Lovely evening."
+  assert:
+    - type: equals
+      value: positive
+- description: s005
+  vars:
+    review: "We waited ninety minutes for cold soup. Never again."
+  assert:
+    - type: equals
+      value: negative
+- description: s006
+  vars:
+    review: "The restaurant is open from noon until ten, except on Mondays."
+  assert:
+    - type: equals
+      value: neutral
+- description: s007
+  vars:
+    review: "Setup took five minutes and it has worked flawlessly ever since."
+  assert:
+    - type: equals
+      value: positive
+- description: s008
+  vars:
+    review: "The app crashes every time I try to upload a photo."
+  assert:
+    - type: equals
+      value: negative
+- description: s009
+  vars:
+    review: "The phone comes in black, silver and green."
+  assert:
+    - type: equals
+      value: neutral
+- description: s010
+  vars:
+    review: "I laughed from start to finish; the cast has wonderful chemistry."
+  assert:
+    - type: equals
+      value: positive
+- description: s011
+  vars:
+    review: "Two hours of my life I will not get back; the plot made no sense."
+  assert:
+    - type: equals
+      value: negative
+- description: s012
+  vars:
+    review: "I watched the film on a Sunday afternoon with my brother."
+  assert:
+    - type: equals
+      value: neutral
+- description: s013
+  vars:
+    review: "Shipping was faster than promised and the packaging was plastic-free."
+  assert:
+    - type: equals
+      value: positive
+- description: s014
+  vars:
+    review: "The charger stopped working after a week and the replacement is also dead."
+  assert:
+    - type: equals
+      value: negative
+- description: s015
+  vars:
+    review: "The manual is available in English, German and French."
+  assert:
+    - type: equals
+      value: neutral
+- description: s016
+  vars:
+    review: "This is the most comfortable pair of running shoes I have ever owned."
+  assert:
+    - type: equals
+      value: positive
+- description: s017
+  vars:
+    review: "The room smelled of smoke and the air conditioning was broken."
+  assert:
+    - type: equals
+      value: negative
+- description: s018
+  vars:
+    review: "The store moved to a new address on Main Street last year."
+  assert:
+    - type: equals
+      value: neutral
+- description: s019
+  vars:
+    review: "The new update fixed every bug I reported. Great job, team!"
+  assert:
+    - type: equals
+      value: positive
+- description: s020
+  vars:
+    review: "Terrible fit, cheap fabric, and returns cost more than the shirt."
+  assert:
+    - type: equals
+      value: negative
+- description: s021
+  vars:
+    review: "The laptop weighs 1.3 kilograms and has two USB-C ports."
+  assert:
+    - type: equals
+      value: neutral
+- description: s022
+  vars:
+    review: "Fresh pasta, generous portions and a very fair price."
+  assert:
+    - type: equals
+      value: positive
+- description: s023
+  vars:
+    review: "The update deleted all my saved playlists without warning."
+  assert:
+    - type: equals
+      value: negative
+- description: s024
+  vars:
+    review: "The meeting was rescheduled to Thursday at three."
+  assert:
+    - type: equals
+      value: neutral
+- description: s025
+  vars:
+    review: "The hotel staff upgraded our room for our anniversary. Unforgettable."
+  assert:
+    - type: equals
+      value: positive
+- description: s026
+  vars:
+    review: "Loud, overpriced and the fries were soggy."
+  assert:
+    - type: equals
+      value: negative
+- description: s027
+  vars:
+    review: "The course consists of twelve lessons of about twenty minutes each."
+  assert:
+    - type: equals
+      value: neutral
+- description: s028
+  vars:
+    review: "Crisp sound, deep bass, and the noise cancelling actually works on trains."
+  assert:
+    - type: equals
+      value: positive
+- description: s029
+  vars:
+    review: "The instructions are missing half the steps, so the shelf wobbles."
+  assert:
+    - type: equals
+      value: negative
+- description: s030
+  vars:
+    review: "The hotel is a ten-minute walk from the central station."
+  assert:
+    - type: equals
+      value: neutral
+- description: s031
+  vars:
+    review: "The tutorial was clear and I built my first app in an afternoon."
+  assert:
+    - type: equals
+      value: positive
+- description: s032
+  vars:
+    review: "My order arrived three weeks late and one item was missing."
+  assert:
+    - type: equals
+      value: negative
+- description: s033
+  vars:
+    review: "The recipe calls for two eggs and a cup of flour."
+  assert:
+    - type: equals
+      value: neutral
+- description: s034
+  vars:
+    review: "Five stars. The blender crushes ice like it is nothing."
+  assert:
+    - type: equals
+      value: positive
+- description: s035
+  vars:
+    review: "The subscription quietly renewed at double the price. Very disappointed."
+  assert:
+    - type: equals
+      value: negative
+- description: s036
+  vars:
+    review: "The app is available for Android and iOS."
+  assert:
+    - type: equals
+      value: neutral
+- description: s037
+  vars:
+    review: "A thoughtful, beautifully shot documentary that stayed with me for days."
+  assert:
+    - type: equals
+      value: positive
+- description: s038
+  vars:
+    review: "The sequel is a lazy copy of the first film with worse jokes."
+  assert:
+    - type: equals
+      value: negative
+- description: s039
+  vars:
+    review: "Customer support replied within an hour and solved the problem immediately."
+  assert:
+    - type: equals
+      value: positive
+- description: s040
+  vars:
+    review: "The keyboard keys started sticking within a month."
+  assert:
+    - type: equals
+      value: negative
+- description: s041
+  vars:
+    review: "Oh great, another update that makes the app slower. Just what I needed."
+  assert:
+    - type: equals
+      value: negative
+- description: s042
+  vars:
+    review: "I expected to hate it, but honestly it won me over by the second episode."
+  assert:
+    - type: equals
+      value: positive
+- description: s043
+  vars:
+    review: "Not bad at all for the price."
+  assert:
+    - type: equals
+      value: positive
+- description: s044
+  vars:
+    review: "The food was fine, nothing special, but the view was stunning."
+  assert:
+    - type: equals
+      value: positive
+- description: s045
+  vars:
+    review: "It works, I suppose, when it feels like it."
+  assert:
+    - type: equals
+      value: negative
+- description: s046
+  vars:
+    review: "I wouldn't say I disliked the hotel."
+  assert:
+    - type: equals
+      value: neutral
+- description: s047
+  vars:
+    review: "The first half is brilliant; the ending ruins everything."
+  assert:
+    - type: equals
+      value: negative
+- description: s048
+  vars:
+    review: "Delivery took exactly the three days stated on the website."
+  assert:
+    - type: equals
+      value: neutral
+- description: s049
+  vars:
+    review: "Could have been worse, could have been a lot better."
+  assert:
+    - type: equals
+      value: neutral
+- description: s050
+  vars:
+    review: "Never have I been so happy to return a product."
+  assert:
+    - type: equals
+      value: negative
+- description: s051
+  vars:
+    review: "Honestly? Worth every cent."
+  assert:
+    - type: equals
+      value: positive
+- description: s052
+  vars:
+    review: "The manual says to charge it overnight before first use."
+  assert:
+    - type: equals
+      value: neutral
+- description: s053
+  vars:
+    review: "I can't recommend this place enough."
+  assert:
+    - type: equals
+      value: positive
+- description: s054
+  vars:
+    review: "I can't recommend this place."
+  assert:
+    - type: equals
+      value: negative
+- description: s055
+  vars:
+    review: "Sure, it's 'waterproof' — until it rains."
+  assert:
+    - type: equals
+      value: negative
+- description: s056
+  vars:
+    review: "My kids haven't stopped playing with it since Christmas."
+  assert:
+    - type: equals
+      value: positive
+- description: s057
+  vars:
+    review: "The price went up by two euros this year."
+  assert:
+    - type: equals
+      value: neutral
+- description: s058
+  vars:
+    review: "Nothing about this phone is bad, but nothing is exciting either."
+  assert:
+    - type: equals
+      value: neutral
+- description: s059
+  vars:
+    review: "Ten out of ten, would get lost in this museum again."
+  assert:
+    - type: equals
+      value: positive
+- description: s060
+  vars:
+    review: "The seats were so uncomfortable that I left at the interval."
+  assert:
+    - type: equals
+      value: negative

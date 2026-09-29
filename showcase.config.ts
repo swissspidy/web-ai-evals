@@ -43,15 +43,20 @@ export default defineConfig({
       generation,
       browsers: ['chrome'],
     },
+    // Gemma 3's q4 ONNX export uses GatherBlockQuantized, which ONNX Runtime Web's Wasm
+    // backend does not implement, so the CPU (Wasm) comparison uses Qwen2.5-0.5B.
     {
-      id: 'gemma3-1b-tjs-wasm',
+      id: 'qwen2.5-0.5b-tjs-wasm',
       kind: 'transformers',
-      model: 'onnx-community/gemma-3-1b-it-ONNX-GQA',
+      model: 'onnx-community/Qwen2.5-0.5B-Instruct',
       device: 'wasm',
       dtype: 'q4',
       generation,
       browsers: ['chrome'],
     },
+    // Chrome's task APIs, on the suites they support (others are skipped).
+    { id: 'chrome-summarizer', kind: 'summarizer', browsers: ['chrome'] },
+    { id: 'chrome-translator', kind: 'translator', browsers: ['chrome'] },
   ],
   suites: allSuites.map((s) => ({ ...s, limit: process.env.WAE_LIMIT ? Number(process.env.WAE_LIMIT) : undefined })),
   run: { timeoutMs: 180_000, retries: 1 },

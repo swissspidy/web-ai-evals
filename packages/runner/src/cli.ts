@@ -4,6 +4,7 @@ import { diffRuns, renderDiff, renderDiffMarkdown, renderMarkdown, renderReport 
 import { readFile, writeFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 import { loadConfig } from './config.js';
+import { runNightly } from './nightly.js';
 import { rescoreRun, runEvals } from './run.js';
 import { startRuntimeServer } from './server.js';
 import { BrowserSession } from './session.js';
@@ -17,6 +18,7 @@ Usage:
   web-ai-evals diff <before.json> [after.json] [--browsers before:after] [--out diff.html]
                     [--score-threshold 0.05] [--latency-ratio 1.5] [--markdown] [--fail-on-flags]
   web-ai-evals rescore --config evals.config.ts <run.json> [--out run.json]
+  web-ai-evals nightly --config nightly.config.ts [--history dir] [--fail-on-flags]
   web-ai-evals serve [--port 47831]
 
 run      Runs every suite × backend × browser in the config and writes results/<runId>.json
@@ -24,6 +26,9 @@ run      Runs every suite × backend × browser in the config and writes results
 doctor   Launches each browser and prints its environment and each backend's availability.
 diff     Compares two runs (or two browsers inside one run) and flags model/browser
          version changes, score changes and latency changes. --fail-on-flags exits 2.
+nightly  Runs the config, diffs it against the previous run with the same name in the
+         history directory (drift) and across browser channels. --fail-on-flags exits 2
+         when drift is flagged.
 rescore  Re-applies the config's scorers to a stored run without a browser.
 `;
 
@@ -49,6 +54,7 @@ async function main(argv: string[]): Promise<number> {
       'score-threshold': { type: 'string' },
       'latency-ratio': { type: 'string' },
       port: { type: 'string' },
+      history: { type: 'string' },
       help: { type: 'boolean', short: 'h' },
     },
   });
@@ -147,6 +153,22 @@ async function main(argv: string[]): Promise<number> {
       await writeFile(out.replace(/\.json$/, '.html'), renderReport([run]));
       console.error(`rescored: ${out}`);
       return 0;
+    }
+
+    case 'nightly': {
+      const config = await loadConfig(values.config ?? 'nightly.config.ts');
+      const res = await runNightly(config, {
+        historyDir: values.history,
+        diff: {
+          scoreThreshold: values['score-threshold'] ? Number(values['score-threshold']) : undefined,
+          latencyRatio: values['latency-ratio'] ? Number(values['latency-ratio']) : undefined,
+        },
+      });
+      process.stdout.write(res.markdown + '\n');
+      if (process.env.GITHUB_STEP_SUMMARY) await writeFile(process.env.GITHUB_STEP_SUMMARY, res.markdown, { flag: 'a' });
+      console.error(`results: ${res.file}${res.previous ? `\ncompared with: ${res.previous}` : ''}`);
+      if (!res.run.cells.length) return 1;
+      return values['fail-on-flags'] && res.drift?.flags.length ? 2 : 0;
     }
 
     case 'serve': {

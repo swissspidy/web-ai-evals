@@ -38,3 +38,23 @@
 {"id": "s038", "input": "The sequel is a lazy copy of the first film with worse jokes.", "expected": "negative"}
 {"id": "s039", "input": "Customer support replied within an hour and solved the problem immediately.", "expected": "positive"}
 {"id": "s040", "input": "The keyboard keys started sticking within a month.", "expected": "negative"}
+{"id": "s041", "input": "Oh great, another update that makes the app slower. Just what I needed.", "expected": "negative", "meta": {"difficulty": "hard"}}
+{"id": "s042", "input": "I expected to hate it, but honestly it won me over by the second episode.", "expected": "positive", "meta": {"difficulty": "hard"}}
+{"id": "s043", "input": "Not bad at all for the price.", "expected": "positive", "meta": {"difficulty": "hard"}}
+{"id": "s044", "input": "The food was fine, nothing special, but the view was stunning.", "expected": "positive", "meta": {"difficulty": "hard"}}
+{"id": "s045", "input": "It works, I suppose, when it feels like it.", "expected": "negative", "meta": {"difficulty": "hard"}}
+{"id": "s046", "input": "I wouldn't say I disliked the hotel.", "expected": "neutral", "meta": {"difficulty": "hard"}}
+{"id": "s047", "input": "The first half is brilliant; the ending ruins everything.", "expected": "negative", "meta": {"difficulty": "hard"}}
+{"id": "s048", "input": "Delivery took exactly the three days stated on the website.", "expected": "neutral", "meta": {"difficulty": "hard"}}
+{"id": "s049", "input": "Could have been worse, could have been a lot better.", "expected": "neutral", "meta": {"difficulty": "hard"}}
+{"id": "s050", "input": "Never have I been so happy to return a product.", "expected": "negative", "meta": {"difficulty": "hard"}}
+{"id": "s051", "input": "Honestly? Worth every cent.", "expected": "positive", "meta": {"difficulty": "hard"}}
+{"id": "s052", "input": "The manual says to charge it overnight before first use.", "expected": "neutral", "meta": {"difficulty": "hard"}}
+{"id": "s053", "input": "I can't recommend this place enough.", "expected": "positive", "meta": {"difficulty": "hard"}}
+{"id": "s054", "input": "I can't recommend this place.", "expected": "negative", "meta": {"difficulty": "hard"}}
+{"id": "s055", "input": "Sure, it's 'waterproof' — until it rains.", "expected": "negative", "meta": {"difficulty": "hard"}}
+{"id": "s056", "input": "My kids haven't stopped playing with it since Christmas.", "expected": "positive", "meta": {"difficulty": "hard"}}
+{"id": "s057", "input": "The price went up by two euros this year.", "expected": "neutral", "meta": {"difficulty": "hard"}}
+{"id": "s058", "input": "Nothing about this phone is bad, but nothing is exciting either.", "expected": "neutral", "meta": {"difficulty": "hard"}}
+{"id": "s059", "input": "Ten out of ten, would get lost in this museum again.", "expected": "positive", "meta": {"difficulty": "hard"}}
+{"id": "s060", "input": "The seats were so uncomfortable that I left at the interval.", "expected": "negative", "meta": {"difficulty": "hard"}}
