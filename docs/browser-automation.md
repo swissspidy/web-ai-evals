@@ -84,9 +84,29 @@ backend):
 
 ## Headless
 
-Headful is the default because that's how users run the APIs. Headless results
-are recorded with `browser.headless: true`, so they stay separate in reports
-and diffs. See the README for the current headless status.
+Checked with Chrome 154 on Linux. Once the model is in the profile, the Prompt
+API and Summarizer work in Chrome's new headless mode (`headless: true`, no X
+server). Timings matched headful: sentiment TTFT p50 was 1.28 s headless and
+1.30 s headful on the same machine.
+
+The first download was done headful (under Xvfb) and is not re-verified in
+headless mode. Headful stays the default because that's how users run the
+APIs. Headless results are recorded with `browser.headless: true`, so they
+stay separate in reports and diffs.
+
+## Known API issues seen during runs (Chrome 154 Stable, Linux, CPU backend)
+
+- **Summarizer ignores `format: "plain-text"`.**
+  - With `type: "tldr"` it returned Markdown news articles (12 of 12), 2–3×
+    longer than the input, with invented placeholders ("[Region Name]").
+  - With `type: "key-points"`, 7 of 12 outputs were lists of questions about
+    the article.
+  - `key-points` with the default Markdown format behaved correctly.
+- **Translator fails to create an en→de translator** with "The translation
+  service count exceeded the limitation".
+  - `chrome://on-device-translation-internals` lists the de–en pack as
+    installed, but `availability()` keeps returning `downloadable`.
+  - Not yet reproduced outside automation.
 
 ## Networks with TLS-intercepting proxies
 
