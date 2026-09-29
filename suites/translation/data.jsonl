@@ -1,0 +1,20 @@
+{"id": "tr01", "input": {"text": "The train to Munich leaves at half past eight.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Der Zug nach München fährt um halb neun ab."}
+{"id": "tr02", "input": {"text": "Could you please close the window? It is cold.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Könnten Sie bitte das Fenster schließen? Es ist kalt."}
+{"id": "tr03", "input": {"text": "We are planning a trip to the mountains next summer.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Wir planen nächsten Sommer eine Reise in die Berge."}
+{"id": "tr04", "input": {"text": "My sister works as a nurse in a large hospital.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Meine Schwester arbeitet als Krankenschwester in einem großen Krankenhaus."}
+{"id": "tr05", "input": {"text": "The museum is closed on Mondays.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Das Museum ist montags geschlossen."}
+{"id": "tr06", "input": {"text": "I forgot my umbrella at the office.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Ich habe meinen Regenschirm im Büro vergessen."}
+{"id": "tr07", "input": {"text": "How much does a ticket to the city centre cost?", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Wie viel kostet eine Fahrkarte ins Stadtzentrum?"}
+{"id": "tr08", "input": {"text": "The children are playing football in the garden.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Die Kinder spielen im Garten Fußball."}
+{"id": "tr09", "input": {"text": "Please send me the report by Friday.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Bitte schicken Sie mir den Bericht bis Freitag."}
+{"id": "tr10", "input": {"text": "This soup tastes better than it looks.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Diese Suppe schmeckt besser, als sie aussieht."}
+{"id": "tr11", "input": {"text": "The library has more than a million books.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Die Bibliothek hat mehr als eine Million Bücher."}
+{"id": "tr12", "input": {"text": "We need to buy milk, bread and apples.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Wir müssen Milch, Brot und Äpfel kaufen."}
+{"id": "tr13", "input": {"text": "The meeting has been moved to next Tuesday.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Das Treffen wurde auf nächsten Dienstag verschoben."}
+{"id": "tr14", "input": {"text": "He has been learning Spanish for three years.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Er lernt seit drei Jahren Spanisch."}
+{"id": "tr15", "input": {"text": "Turn left at the second traffic light.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Biegen Sie an der zweiten Ampel links ab."}
+{"id": "tr16", "input": {"text": "The new bridge will open in the spring.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Die neue Brücke wird im Frühling eröffnet."}
+{"id": "tr17", "input": {"text": "I would like a coffee with a little milk, please.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Ich hätte gern einen Kaffee mit etwas Milch, bitte."}
+{"id": "tr18", "input": {"text": "The company hired twenty new employees this year.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Das Unternehmen hat dieses Jahr zwanzig neue Mitarbeiter eingestellt."}
+{"id": "tr19", "input": {"text": "It has been raining all day.", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Es regnet schon den ganzen Tag."}
+{"id": "tr20", "input": {"text": "Do you know where the nearest pharmacy is?", "sourceLanguage": "en", "targetLanguage": "de"}, "expected": "Wissen Sie, wo die nächste Apotheke ist?"}
