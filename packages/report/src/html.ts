@@ -128,7 +128,21 @@ ${body}
 
 /** Stable label for a cell across merged runs. */
 function cellLabel(cell: CellResult, multiBrowser: boolean): string {
-  return multiBrowser ? `${cell.backend.id} · ${cell.environment.browser.id}` : cell.backend.id;
+  const host = cell.key.includes(' @ ') ? ` @ ${cell.key.split(' @ ')[1]}` : '';
+  return (multiBrowser ? `${cell.backend.id} · ${cell.environment.browser.id}` : cell.backend.id) + host;
+}
+
+function hostLabel(run: RunFile): string {
+  const gpu = run.cells.find((c) => c.environment.gpu?.description || c.environment.gpu?.vendor)?.environment.gpu;
+  const platform = { darwin: 'macOS', win32: 'Windows', linux: 'Linux' }[run.host.platform] ?? run.host.platform;
+  return gpu ? `${platform} ${gpu.description || gpu.vendor}` : `${platform} ${run.host.cores}-core CPU`;
+}
+
+/** Merge cells from several runs; cells whose key repeats across runs get the host appended. */
+function mergeCells(runs: RunFile[]): CellResult[] {
+  const count = new Map<string, number>();
+  for (const r of runs) for (const c of r.cells) count.set(c.key, (count.get(c.key) ?? 0) + 1);
+  return runs.flatMap((r) => r.cells.map((c) => ((count.get(c.key) ?? 0) > 1 ? { ...c, key: `${c.key} @ ${hostLabel(r)}` } : c)));
 }
 
 interface Series {
@@ -280,7 +294,7 @@ function environmentTable(cells: CellResult[]): string {
 
 /** Render one or more runs (e.g. from different machines) as one self-contained HTML report. */
 export function renderReport(runs: RunFile[], options: ReportOptions = {}): string {
-  const cells = runs.flatMap((r) => r.cells);
+  const cells = mergeCells(runs);
   const title = options.title ?? runs[0]?.name ?? 'web-ai-evals report';
   const multiBrowser = new Set(cells.map((c) => c.environment.browser.id)).size > 1;
   const colors = assignColors(cells, multiBrowser);
