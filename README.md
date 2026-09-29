@@ -45,7 +45,7 @@ run them. See [the first report](#first-report) and
 
 ## Quick start
 
-Requires Node 22.18+ (for native TypeScript configs), pnpm, and Google Chrome.
+Requires Node 24+ (for native TypeScript configs), pnpm, and Google Chrome.
 
 ```sh
 pnpm install

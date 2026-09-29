@@ -131,7 +131,7 @@ export function resolveConfig(config: EvalConfig, baseDir: string): ResolvedConf
   };
 }
 
-/** Load an evals config (.ts, .mts, .js, .mjs). Node >= 22.18 strips TypeScript types natively. */
+/** Load an evals config (.ts, .mts, .js, .mjs). Node >= 24 strips TypeScript types natively. */
 export async function loadConfig(file: string): Promise<ResolvedConfig> {
   const abs = path.resolve(file);
   const mod = (await import(pathToFileURL(abs).href)) as { default?: EvalConfig };

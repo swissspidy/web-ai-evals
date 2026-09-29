@@ -27,7 +27,7 @@ model isn't available on Linux.
 1. Create a dedicated macOS user that is **logged in to a GUI session**.
    Headful Chrome needs a window server, so enable automatic login and turn
    off sleep: `sudo pmset -a sleep 0 displaysleep 0`.
-2. Install Node 22+ and pnpm: `brew install node pnpm`.
+2. Install Node 24+ and pnpm: `brew install node pnpm`.
 3. Install Google Chrome, Chrome Beta and Chrome Canary from google.com/chrome.
    Playwright finds them in `/Applications`.
 4. Register a GitHub Actions runner with the labels
