@@ -39,6 +39,8 @@ export interface RunRequestOptions {
 
 type PageLoadReport = Omit<LoadReport, 'availabilityBefore' | 'downloaded' | 'coldStarts'>;
 
+const BACKEND_DEAD = /device (was )?lost|disposed|Instance reference no longer exists|session.*destroyed|crashed/i;
+
 const BUILT_IN_KINDS = new Set(['prompt-api', 'summarizer', 'writer', 'rewriter', 'translator']);
 
 /**
@@ -144,7 +146,9 @@ export class BrowserSession {
     this.progressHandler = undefined;
     this.current = report.status === 'ok' ? { spec, task } : undefined;
     this.log(`${spec.id}: load ${report.status}${report.loadMs ? ` in ${(report.loadMs / 1000).toFixed(1)} s` : ''}${report.error ? ` (${report.error})` : ''}`);
-    return { ...report, availabilityBefore, downloaded };
+    // Built-in AI fires downloadprogress 0 and 1 even when the model is cached; only report
+    // download time when the model was actually missing.
+    return { ...report, downloadMs: downloaded ? report.downloadMs : undefined, availabilityBefore, downloaded };
   }
 
   /** Run one request with a page-side timeout, a Node-side hard timeout and retries. */
@@ -156,6 +160,11 @@ export class BrowserSession {
       last = await this.runOnce({ ...request, timeoutMs }, timeoutMs + 15_000);
       if (last.status === 'ok' || last.status === 'unavailable') return { ...last, attempts: attempt };
       this.log(`${request.exampleId}: ${last.status} (${last.error ?? ''}), attempt ${attempt}/${retries + 1}`);
+      // A lost GPU device or disposed session poisons every later request: reload the backend.
+      if (BACKEND_DEAD.test(last.error ?? '')) {
+        this.log(`${request.exampleId}: backend looks dead, reloading page and backend`);
+        await this.resetPage().catch((e) => this.log(`reset failed: ${(e as Error).message}`));
+      }
     }
     return { ...last!, attempts: retries + 1 };
   }

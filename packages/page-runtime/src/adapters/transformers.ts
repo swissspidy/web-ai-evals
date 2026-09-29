@@ -60,21 +60,14 @@ export const transformersAdapter: BackendAdapter = {
   async load(spec, _task, ctx): Promise<LoadedBackend> {
     const t = await loadTransformers();
     const kind = (spec.options?.pipeline as string | undefined) ?? 'text-generation';
-    const files = new Map<string, { loaded: number; total: number }>();
     const pipe = await (t.pipeline as (...args: unknown[]) => Promise<any>)(kind, spec.model, {
       device: spec.device ?? 'webgpu',
       dtype: spec.dtype ?? 'q4',
       ...(spec.options?.pipelineOptions as Record<string, unknown> | undefined),
-      progress_callback: (p: { status: string; file?: string; loaded?: number; total?: number }) => {
-        if (p.status !== 'progress' || !p.file || !p.total) return;
-        files.set(p.file, { loaded: p.loaded ?? 0, total: p.total });
-        let loaded = 0;
-        let total = 0;
-        for (const f of files.values()) {
-          loaded += f.loaded;
-          total += f.total;
-        }
-        ctx.onProgress({ progress: total ? loaded / total : 0, loadedBytes: loaded, totalBytes: total, file: p.file });
+      // 'progress_total' aggregates all files; per-file 'progress' events would hit 100% on small files first.
+      progress_callback: (p: { status: string; progress?: number; loaded?: number; total?: number; name?: string }) => {
+        if (p.status !== 'progress_total' || p.progress === undefined) return;
+        ctx.onProgress({ progress: p.progress / 100, loadedBytes: p.loaded, totalBytes: p.total, file: p.name });
       },
     });
     const tokenizer = pipe.tokenizer;

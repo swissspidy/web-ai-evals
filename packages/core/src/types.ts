@@ -37,6 +37,11 @@ export interface BackendSpec {
   options?: Record<string, unknown>;
   /** Default generation options (maxTokens, temperature, ...). */
   generation?: GenerationOptions;
+  /**
+   * Runner-side filter: only run this backend in these browser ids (e.g. the
+   * Prompt API as "phi-4-mini" only in Edge). Ignored by the page runtime.
+   */
+  browsers?: string[];
 }
 
 export interface GenerationOptions {

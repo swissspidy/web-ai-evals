@@ -23,7 +23,10 @@ export const webllmAdapter: BackendAdapter = {
       if (!record && !spec.options?.appConfig) {
         return { availability: 'unavailable', reason: `model "${spec.model}" is not in WebLLM prebuiltAppConfig` };
       }
-      const missing = (record?.required_features ?? []).filter((f) => !adapter.features.has(f as GPUFeatureName));
+      // Some f16 records (e.g. gemma3-1b-it-q4f16_1) do not declare shader-f16 although they need it.
+      const required = new Set(record?.required_features ?? []);
+      if (/q\df16/.test(spec.model)) required.add('shader-f16');
+      const missing = [...required].filter((f) => !adapter.features.has(f as GPUFeatureName));
       if (missing.length) return { availability: 'unavailable', reason: `GPU adapter lacks required features: ${missing.join(', ')}` };
       const cached = await webllm.hasModelInCache(spec.model).catch(() => false);
       return { availability: cached ? 'available' : 'downloadable' };

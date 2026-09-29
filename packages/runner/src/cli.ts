@@ -93,7 +93,7 @@ async function main(argv: string[]): Promise<number> {
             console.log(`  built-in: ${Object.entries(env.builtInApis).map(([k, v]) => `${k}${v ? '' : ' ✖'}`).join(', ')}`);
             console.log(`  isolated: ${env.crossOriginIsolated}`);
             for (const suite of config.suites) {
-              for (const spec of config.backends.filter((b) => !suite.backends || suite.backends.includes(b.id))) {
+              for (const spec of config.backends.filter((b) => (!suite.backends || suite.backends.includes(b.id)) && (!b.browsers || b.browsers.includes(browser.id)))) {
                 const a = await session.availability(spec, suite.task);
                 console.log(`  ${a.availability === 'unavailable' ? '✖' : a.availability === 'available' ? '✔' : '↓'} ${suite.id}/${spec.id}: ${a.availability}${a.reason ? ` — ${a.reason}` : ''}`);
               }

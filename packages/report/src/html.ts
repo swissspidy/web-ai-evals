@@ -67,7 +67,7 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space:
 details > summary { cursor: pointer; color: var(--ink-2); margin: 8px 0; }
 .out { max-width: 36ch; white-space: pre-wrap; word-break: break-word; }
 .sc { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
-.chart { width: 100%; height: auto; display: block; }
+.chart { width: 100%; max-width: 820px; height: auto; display: block; }
 .chart text { fill: var(--muted); font-size: 12px; }
 .chart .lbl { fill: var(--ink-2); font-size: 12px; }
 .chart .gridline { stroke: var(--grid); stroke-width: 1; }

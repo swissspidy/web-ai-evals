@@ -117,7 +117,7 @@ export async function runEvals(config: ResolvedConfig, options: RunEvalsOptions 
       }
       try {
         for (const loaded of suites) {
-          for (const spec of backendsFor(config, loaded.suite, filter)) {
+          for (const spec of backendsFor(config, loaded.suite, filter).filter((b) => !b.browsers || b.browsers.includes(browser.id))) {
             const cell = await runCell(session, config, loaded, spec, log);
             run.cells.push(cell);
             await save();
