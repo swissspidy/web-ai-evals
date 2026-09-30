@@ -41,7 +41,7 @@ const SUITES = {
 const run = runs[0];
 const num = (v) => (Number.isFinite(Number(v)) ? String(Number(v)) : '?');
 const GPU_BACKENDS = ['phi-4-mini', 'gemma4-builtin', 'gemma3-1b-webllm', 'gemma3-1b-tjs-webgpu'];
-const gpuMeasured = cells.some((c) => GPU_BACKENDS.includes(c.backend.id) && c.load.status === 'ok');
+const gpuMeasured = cells.some((c) => GPU_BACKENDS.includes(c.backend.id) && c.load.status === 'ok' && c.summary.ok > 0);
 
 /** One line per machine, from any cell of that run (loaded or not). */
 function machineLine(r) {
