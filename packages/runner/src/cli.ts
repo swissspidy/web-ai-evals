@@ -106,7 +106,10 @@ async function main(argv: string[]): Promise<number> {
             if (browser.channel !== 'chromium' && env.builtInApis.LanguageModel) {
               const diag = await builtInDiagnostics(session.browser.context);
               if (diag) {
-                console.log(`  on-device model: performance class ${diag.performanceClass ?? '?'}`);
+                console.log(
+                  `  on-device model: performance class ${diag.performanceClass ?? '?'}` +
+                    (diag.crashCount ? `, crash count ${diag.crashCount.current}/${diag.crashCount.max}` : ''),
+                );
                 for (const b of diag.blockers) console.log(`    ✖ ${b}`);
                 for (const a of diag.assets) console.log(`    · ${a}`);
               }

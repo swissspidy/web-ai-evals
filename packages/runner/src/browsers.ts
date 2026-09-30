@@ -42,6 +42,12 @@ export const FLAG_PRESETS: Record<string, { enable?: string[]; args?: string[] }
   'sampling-mode': { enable: ['AIPromptAPIParams'] },
   /** Force the CPU backend of the on-device model service. */
   'force-cpu': { enable: ['OnDeviceModelForceCpuBackend'] },
+  /**
+   * Gemma 4 instead of Gemini Nano for every built-in AI API
+   * (chrome://flags/#gemma4-for-built-in-ai). Use a separate browser id, and so a
+   * separate profile, so Gemini Nano and Gemma 4 can be compared in one run.
+   */
+  gemma4: { enable: ['AIApiFoundationalModel:model_version/v4', 'OptimizationGuideManifestBroker'] },
   /** WebGPU on Linux / software adapters (needed for WebLLM without a supported GPU driver). */
   'unsafe-webgpu': { args: ['--enable-unsafe-webgpu', '--enable-unsafe-swiftshader'], enable: ['Vulkan'] },
 };

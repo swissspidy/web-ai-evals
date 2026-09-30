@@ -6,6 +6,8 @@ export interface BuiltInDiagnostics {
   criteria: string[];
   /** Criteria that are false: the reasons the model will not install or run. */
   blockers: string[];
+  /** e.g. { current: 2, max: 3 }. At the maximum, Chrome refuses to load this model version. */
+  crashCount?: { current: number; max: number };
   assets: string[];
   useCases: string[];
 }
@@ -49,10 +51,17 @@ export async function builtInDiagnostics(context: BrowserContext): Promise<Built
     });
     if (lines.some((l) => /debugging pages are currently disabled/i.test(l))) return undefined;
     const criteria = [...new Set(lines.filter((l) => /^(Enough|Device Capable|Enabled by)/.test(l)))];
+    const crash = lines.map((l) => /Model crash count \(current\/maximum\):\s*(\d+)\s*\/\s*(\d+)/.exec(l)).find(Boolean);
+    const crashCount = crash ? { current: Number(crash[1]), max: Number(crash[2]) } : undefined;
+    const blockers = criteria.filter((l) => /\bfalse\b/.test(l));
+    if (crashCount && crashCount.current >= crashCount.max) {
+      blockers.push(`Model crashed ${crashCount.current} times; Chrome won't load this version (reset in chrome://on-device-internals)`);
+    }
     return {
       performanceClass: lines.find((l) => l.startsWith('Device performance class'))?.split(':')[1]?.trim(),
       criteria,
-      blockers: criteria.filter((l) => /\bfalse\b/.test(l)),
+      blockers,
+      crashCount,
       assets: [...new Set(lines.filter((l) => /_component\b/.test(l)))],
       useCases: [...new Set(lines.filter((l) => /^(prompt_api|summarizer_api|writing_assistance_api|proofreader_api) /.test(l)))],
     };

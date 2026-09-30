@@ -29,6 +29,7 @@ suite (JSONL) × backends × browsers  ──►  results/<runId>.json  ──�
 |---|---|---|
 | Prompt API (Gemini Nano, Chrome) | `prompt-api` | ✅ Chrome 154 Stable, Linux, CPU backend |
 | Prompt API (Phi-4-mini, Edge) | `prompt-api` | ⚠️ needs Edge Dev/Canary on Windows/macOS with a GPU |
+| Prompt API (Gemma 4 2B, Chrome flag) | `prompt-api` + `gemma4` preset | ⚠️ downloads on Chrome 154, but needs a GPU to run ([details](docs/browser-automation.md#gemma-4-as-the-built-in-model)) |
 | Summarizer / Writer / Rewriter | `summarizer`, `writer`, `rewriter` | ✅ Summarizer on Chrome 154 (see the known issue with `plain-text`); Writer and Rewriter need the `writing-apis` flag preset |
 | Translator | `translator` | ⚠️ Chrome 154 in automation: "translation service count exceeded" ([details](docs/browser-automation.md#known-api-issues-seen-during-runs-chrome-154-stable-linux-cpu-backend)) |
 | Classifier (WebAI Studio extension polyfill) | `classifier` | ⚠️ needs the extension installed in the profile |
@@ -133,6 +134,7 @@ an existing run without launching a browser, run `web-ai-evals rescore`.
 | Preset | Effect |
 |---|---|
 | `force-cpu` | Runs Gemini Nano on the CPU backend |
+| `gemma4` | Runs every built-in API on Gemma 4 instead of Gemini Nano (`chrome://flags/#gemma4-for-built-in-ai`); give it its own browser id so it gets its own profile |
 | `writing-apis` | Enables Writer, Rewriter and Proofreader |
 | `sampling-mode` | Enables `samplingMode` on the Prompt API |
 | `unsafe-webgpu` | Enables WebGPU on Linux and software adapters |
