@@ -3,7 +3,7 @@
   "runId": "2026-09-29T14-05-55-ef53a4",
   "name": "Built-in AI vs in-page runtimes",
   "startedAt": "2026-09-29T14:05:55.248Z",
-  "finishedAt": "2026-09-29T15:40:55.486Z",
+  "finishedAt": "2026-09-30T06:52:32.810Z",
   "tool": {
     "name": "@web-ai-evals/runner",
     "version": "0.1.0"
@@ -12263,14 +12263,14 @@
         },
         "os": {
           "platform": "linux",
-          "release": "6.18.44-fc-v37",
+          "release": "6.18.44-fc-v50",
           "arch": "x64",
           "version": ""
         },
         "hardware": {
-          "cpuModel": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+          "cpuModel": "Intel(R) Xeon(R) Processor @ 2.80GHz",
           "cores": 4,
-          "memoryBytes": 16877547520,
+          "memoryBytes": 16876515328,
           "deviceMemoryGb": 16
         },
         "webgpu": false,
@@ -12280,14 +12280,18 @@
           "model": "v3Nano",
           "modelVersion": "2025.08.14.1358 (component 2025.8.21.1028)",
           "details": {
+            "sourceLanguage": "en",
+            "targetLanguage": "de",
             "builtInComponents": {
-              "onDeviceModel": "2025.8.21.1028",
               "modelsManifest": "1.20260927.2",
-              "baseModel": "v3Nano",
-              "baseModelVersion": "2025.08.14.1358",
               "performanceClass": "8",
               "vramMb": "0",
-              "asset:nano_v3_cpu_component": "2025.8.21.1028"
+              "modelCrashCount": "0",
+              "asset:nano_v3_cpu_component": "2025.8.21.1028",
+              "onDeviceModel": "2025.8.21.1028",
+              "activeAsset": "nano_v3_cpu_component",
+              "baseModel": "v3Nano",
+              "baseModelVersion": "2025.08.14.1358"
             }
           }
         },
@@ -12307,9 +12311,15 @@
         }
       },
       "load": {
-        "status": "error",
-        "loadMs": 2909.339999999851,
-        "error": "NotSupportedError: Unable to create translator for the given source and target language.",
+        "status": "ok",
+        "loadMs": 185.34499999997206,
+        "downloadMs": 185.11999999987893,
+        "model": {
+          "details": {
+            "sourceLanguage": "en",
+            "targetLanguage": "de"
+          }
+        },
         "availabilityBefore": {
           "availability": "downloadable"
         },
@@ -12318,262 +12328,541 @@
       "results": [
         {
           "exampleId": "tr01",
-          "phase": "warm",
+          "phase": "cold",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Der Zug nach München fährt um halb acht.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 391.61000000010245,
+            "totalMs": 391.7950000001583,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2387869,
+            "jsHeapTotalBytes": 3564021
+          },
+          "scores": {
+            "chrF": 0.8260843340229671,
+            "exact": 0
+          }
         },
         {
           "exampleId": "tr02",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Könnten Sie bitte das Fenster schließen? Es ist kalt.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 28.125,
+            "totalMs": 41.24500000011176,
+            "outputTokens": 2,
+            "tokensPerSecond": 77.4293457218053,
+            "tokenCountSource": "chunks",
+            "chunks": 2
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2387869,
+            "jsHeapTotalBytes": 3564021
+          },
+          "scores": {
+            "chrF": 1,
+            "exact": 1
+          }
         },
         {
           "exampleId": "tr03",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Wir planen einen Ausflug in die Berge im nächsten Sommer.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 25.59000000008382,
+            "totalMs": 25.795000000158325,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2427633,
+            "jsHeapTotalBytes": 3564229
+          },
+          "scores": {
+            "chrF": 0.7164813367188194,
+            "exact": 0
+          }
         },
         {
           "exampleId": "tr04",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Meine Schwester arbeitet als Krankenschwester in einem großen Krankenhaus.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 173.01499999989755,
+            "totalMs": 173.11999999987893,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2453542,
+            "jsHeapTotalBytes": 3564350
+          },
+          "scores": {
+            "chrF": 1,
+            "exact": 1
+          }
         },
         {
           "exampleId": "tr05",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Montags ist das Museum geschlossen.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 16.679999999934807,
+            "totalMs": 16.794999999925494,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2453542,
+            "jsHeapTotalBytes": 3564350
+          },
+          "scores": {
+            "chrF": 0.7507428154546276,
+            "exact": 0
+          }
         },
         {
           "exampleId": "tr06",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Ich habe meinen Regenschirm im Büro vergessen.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 18.979999999981374,
+            "totalMs": 19.074999999953434,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2453542,
+            "jsHeapTotalBytes": 3564350
+          },
+          "scores": {
+            "chrF": 1,
+            "exact": 1
+          }
         },
         {
           "exampleId": "tr07",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Was kostet ein Ticket in die Innenstadt?",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 20.230000000214204,
+            "totalMs": 20.325000000186265,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2515833,
+            "jsHeapTotalBytes": 3826729
+          },
+          "scores": {
+            "chrF": 0.33066088822251366,
+            "exact": 0
+          }
         },
         {
           "exampleId": "tr08",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Die Kinder spielen im Garten Fußball.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 18.514999999897555,
+            "totalMs": 18.634999999776483,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2515833,
+            "jsHeapTotalBytes": 3826729
+          },
+          "scores": {
+            "chrF": 1,
+            "exact": 1
+          }
         },
         {
           "exampleId": "tr09",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Bitte senden Sie mir den Bericht bis Freitag.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 19.489999999990687,
+            "totalMs": 19.574999999953434,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2515833,
+            "jsHeapTotalBytes": 3826729
+          },
+          "scores": {
+            "chrF": 0.8372569880763175,
+            "exact": 0
+          }
         },
         {
           "exampleId": "tr10",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Diese Suppe schmeckt besser als sie aussieht.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 18.545000000158325,
+            "totalMs": 18.640000000130385,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2570786,
+            "jsHeapTotalBytes": 3826978
+          },
+          "scores": {
+            "chrF": 0.9221089231480091,
+            "exact": 1
+          }
         },
         {
           "exampleId": "tr11",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Die Bibliothek hat mehr als eine Million Bücher.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 20.919999999925494,
+            "totalMs": 21.03000000002794,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2570786,
+            "jsHeapTotalBytes": 3826978
+          },
+          "scores": {
+            "chrF": 1,
+            "exact": 1
+          }
         },
         {
           "exampleId": "tr12",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Wir müssen Milch, Brot und Äpfel kaufen.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 20.18500000005588,
+            "totalMs": 20.28499999991618,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2570786,
+            "jsHeapTotalBytes": 3826978
+          },
+          "scores": {
+            "chrF": 1,
+            "exact": 1
+          }
         },
         {
           "exampleId": "tr13",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Das Treffen wurde auf nächsten Dienstag verschoben.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 17.53500000014901,
+            "totalMs": 17.635000000009313,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2625504,
+            "jsHeapTotalBytes": 3827240
+          },
+          "scores": {
+            "chrF": 1,
+            "exact": 1
+          }
         },
         {
           "exampleId": "tr14",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Er lernt seit drei Jahren Spanisch.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 17.959999999962747,
+            "totalMs": 18.054999999934807,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2625504,
+            "jsHeapTotalBytes": 3827240
+          },
+          "scores": {
+            "chrF": 1,
+            "exact": 1
+          }
         },
         {
           "exampleId": "tr15",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "An der zweiten Ampel links abbiegen.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 18.209999999962747,
+            "totalMs": 18.334999999962747,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2625504,
+            "jsHeapTotalBytes": 3827240
+          },
+          "scores": {
+            "chrF": 0.7482292670697561,
+            "exact": 0
+          }
         },
         {
           "exampleId": "tr16",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Im Frühjahr wird die neue Brücke geöffnet.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 15.925000000046566,
+            "totalMs": 16.010000000009313,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2679911,
+            "jsHeapTotalBytes": 3827475
+          },
+          "scores": {
+            "chrF": 0.6131374751721351,
+            "exact": 0
+          }
         },
         {
           "exampleId": "tr17",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Ich hätte gerne einen Kaffee mit ein wenig Milch, bitte.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 20.665000000037253,
+            "totalMs": 20.75,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2679911,
+            "jsHeapTotalBytes": 3827475
+          },
+          "scores": {
+            "chrF": 0.8018277562268971,
+            "exact": 0
+          }
         },
         {
           "exampleId": "tr18",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Das Unternehmen hat in diesem Jahr zwanzig neue Mitarbeiter eingestellt.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 23.069999999832362,
+            "totalMs": 23.204999999841675,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2679911,
+            "jsHeapTotalBytes": 3827475
+          },
+          "scores": {
+            "chrF": 0.9127968388909827,
+            "exact": 0
+          }
         },
         {
           "exampleId": "tr19",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Es hat den ganzen Tag geregnet.",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 19.609999999869615,
+            "totalMs": 19.734999999869615,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2735692,
+            "jsHeapTotalBytes": 3827760
+          },
+          "scores": {
+            "chrF": 0.6108772367856535,
+            "exact": 0
+          }
         },
         {
           "exampleId": "tr20",
           "phase": "warm",
           "repeat": 1,
-          "status": "error",
-          "error": "NotSupportedError: Unable to create translator for the given source and target language.",
-          "attempts": 0,
+          "status": "ok",
+          "output": "Wissen Sie, wo die nächste Apotheke ist?",
+          "attempts": 1,
           "timings": {
-            "totalMs": 0
+            "ttftMs": 24.790000000037253,
+            "totalMs": 24.919999999925494,
+            "outputTokens": 1,
+            "tokenCountSource": "chunks",
+            "chunks": 1
           },
-          "scores": {}
+          "memory": {
+            "jsHeapUsedBytes": 2735692,
+            "jsHeapTotalBytes": 3827760
+          },
+          "scores": {
+            "chrF": 1,
+            "exact": 1
+          }
         }
       ],
       "summary": {
         "total": 20,
-        "ok": 0,
-        "errors": 20,
+        "ok": 20,
+        "errors": 0,
         "timeouts": 0,
         "unavailable": 0,
         "scores": {
-          "chrF": 0,
-          "exact": 0
+          "chrF": 0.853510192989434,
+          "exact": 0.5
         },
         "aggregates": {},
-        "warm": {}
+        "ttftMs": {
+          "n": 20,
+          "mean": 46.482500000006986,
+          "p50": 19.897499999962747,
+          "p90": 42.61399999998996,
+          "p95": 183.94474999990794,
+          "min": 15.925000000046566,
+          "max": 391.61000000010245
+        },
+        "totalMs": {
+          "n": 20,
+          "mean": 47.2479999999865,
+          "p50": 20.009999999892898,
+          "p90": 54.432500000088666,
+          "p95": 184.05374999989306,
+          "min": 16.010000000009313,
+          "max": 391.7950000001583
+        },
+        "tokensPerSecond": {
+          "n": 1,
+          "mean": 77.4293457218053,
+          "p50": 77.4293457218053,
+          "p90": 77.4293457218053,
+          "p95": 77.4293457218053,
+          "min": 77.4293457218053,
+          "max": 77.4293457218053
+        },
+        "warm": {
+          "ttftMs": {
+            "n": 19,
+            "mean": 28.317894736844067,
+            "p50": 19.609999999869615,
+            "p90": 26.097000000067055,
+            "p95": 42.613999999989446,
+            "min": 15.925000000046566,
+            "max": 173.01499999989755
+          },
+          "totalMs": {
+            "n": 19,
+            "mean": 29.113947368398506,
+            "p50": 19.734999999869615,
+            "p90": 28.885000000149,
+            "p95": 54.4325000000882,
+            "min": 16.010000000009313,
+            "max": 173.11999999987893
+          },
+          "tokensPerSecond": {
+            "n": 1,
+            "mean": 77.4293457218053,
+            "p50": 77.4293457218053,
+            "p90": 77.4293457218053,
+            "p95": 77.4293457218053,
+            "min": 77.4293457218053,
+            "max": 77.4293457218053
+          }
+        }
       },
       "scorers": [
         "chrF",
         "exact"
       ]
     }
+  ],
+  "notes": [
+    "translation/chrome-translator was re-run on 2026-09-30 in the same profile and browser version, after the runner learned to retry Translator.create() while Chrome installs the translation runtime on first use. The original attempt had failed during that install."
   ]
 }

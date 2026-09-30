@@ -63,3 +63,28 @@ describe('runner e2e (mock backend)', () => {
     expect(off.summary.scores).toEqual({});
   });
 });
+
+describe('session load retries (mock backend)', () => {
+  it('retries a load that fails while the model is still installing, and not other failures', async () => {
+    const { BrowserSession } = await import('@web-ai-evals/runner');
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'wae-retry-'));
+    const session = await BrowserSession.open({
+      browser: { id: 'chromium', channel: 'chromium', headless: true, proxy: false },
+      profilesDir: dir,
+      port: 0,
+    });
+    try {
+      const task = { type: 'translate' as const, sourceLanguage: 'en', targetLanguage: 'de' };
+      const installing = await session.load(
+        { id: 'installing', kind: 'mock', options: { failLoads: 2, loadError: 'NotSupportedError: Unable to create translator for the given source and target language.' } },
+        task,
+        { installRetryMs: 50 },
+      );
+      expect(installing.status).toBe('ok');
+      const broken = await session.load({ id: 'broken', kind: 'mock', options: { failLoads: 5, loadError: 'something else' } }, task, { installRetryMs: 50 });
+      expect(broken).toMatchObject({ status: 'error', error: 'Error: something else' });
+    } finally {
+      await session.close();
+    }
+  });
+});
