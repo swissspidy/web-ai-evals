@@ -127,7 +127,7 @@ const html = `<title>Built-in AI vs In-Page Models</title>
 <style>
 /* Layout: one reading column; each suite is a three-column bench sheet (who | quality | latency) that stacks on phones. */
 :root {
-  --paper: #f5f6f4; --sheet: #fcfcfb; --ink: #15181b; --ink-2: #4f5559; --muted: #7d8387; --rule: #dfe1dd; --track: #eceeea; --accent: #1f5f8b;
+  --paper: #f5f6f4; --sheet: #fcfcfb; --ink: #15181b; --ink-2: #4f5559; --muted: #686e72; --rule: #dfe1dd; --track: #eceeea; --accent: #1f5f8b;
   --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948;
   --display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
