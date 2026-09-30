@@ -1,5 +1,9 @@
 # Reports
 
+Published at **https://swissspidy.github.io/web-ai-evals/**. The `Pages`
+workflow deploys this directory (minus the build script and this README) on
+every push to `main` that touches it.
+
 | Report | Machine | Backends |
 |---|---|---|
 | [2026-09-29-cpu](2026-09-29-cpu/index.html) ([full generated report](2026-09-29-cpu/full-report.html), [run file](2026-09-29-cpu/run.json)) | Linux VM, 4-core Xeon, 16 GB, **no GPU**, Chrome 154 | Gemini Nano (CPU), Summarizer API, Translator API, Qwen2.5-0.5B on Transformers.js Wasm |
@@ -9,6 +13,9 @@
 ```sh
 node reports/build-showcase.mjs reports/2026-09-29-cpu/run.json > reports/2026-09-29-cpu/index.html
 ```
+
+It writes a standalone HTML document. Pass `--fragment` for hosts that add their
+own document wrapper. When you add a report, also link it from `index.html`.
 
 ## Adding the GPU backends
 

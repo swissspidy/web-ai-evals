@@ -216,7 +216,8 @@ Chrome installed.
   Transformers.js (Qwen2.5-0.5B on Wasm), all on the same four suites.
   - WebLLM and Transformers.js WebGPU are implemented and report *unavailable*
     (no WebGPU adapter). WebLLM on a SwiftShader adapter loses the device.
-  - Report: [`reports/2026-09-29-cpu`](reports/2026-09-29-cpu).
+  - Report: [swissspidy.github.io/web-ai-evals](https://swissspidy.github.io/web-ai-evals/2026-09-29-cpu/)
+    (source: [`reports/2026-09-29-cpu`](reports/2026-09-29-cpu)).
 - **Milestone 3:** `web-ai-evals nightly` on Chrome Stable 154 and Beta 155,
   run on two consecutive "nights".
   - Both channels ship v3Nano 2025.08.14.1358, and neither night flagged
@@ -254,7 +255,8 @@ Chrome installed.
 
 ## First report
 
-[`reports/2026-09-29-cpu/`](reports/2026-09-29-cpu) compares Gemini Nano,
+**[Read it on GitHub Pages](https://swissspidy.github.io/web-ai-evals/2026-09-29-cpu/)**
+(source: [`reports/2026-09-29-cpu/`](reports/2026-09-29-cpu)). It compares Gemini Nano,
 Chrome's Summarizer and Translator APIs, and Qwen2.5-0.5B on Transformers.js
 Wasm across all four suites, in Chrome 154 on a CPU-only machine.
 
