@@ -102,11 +102,25 @@ stay separate in reports and diffs.
   - With `type: "key-points"`, 7 of 12 outputs were lists of questions about
     the article.
   - `key-points` with the default Markdown format behaved correctly.
-- **Translator fails to create an en→de translator** with "The translation
-  service count exceeded the limitation".
-  - `chrome://on-device-translation-internals` lists the de–en pack as
-    installed, but `availability()` keeps returning `downloadable`.
-  - Not yet reproduced outside automation.
+- **Translator fails on first use, with misleading errors.** In a profile
+  that has never translated, `Translator.create()` starts installing the
+  TranslateKit runtime and the language pack, then fails immediately instead
+  of waiting for them.
+  - The error is either "Unable to create translator for the given source
+    and target language" or "The translation service count exceeded the
+    limitation".
+  - The second message is misleading. In Chromium it means either that more
+    than 10 origins are using the translation service
+    (`TranslationAPIMaxServiceCount`), or that the translation installer
+    isn't ready yet. Here it was the second.
+  - This is not a cloud rate limit: the Translator runs on-device, so cooling
+    down or clearing the cache doesn't apply.
+  - Once both components are installed, `create()` succeeds. The runner
+    retries a Translator load every 15 s, with a fresh user activation, while
+    it sees these errors. Verified on a fresh profile: one failed attempt, then
+    success.
+  - `availability()` keeps returning `downloadable` even after both
+    components are installed and translation works.
 
 ## Networks with TLS-intercepting proxies
 

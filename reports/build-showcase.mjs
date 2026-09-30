@@ -13,7 +13,7 @@ const wrap = (html) =>
     : `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n${html.replace(/<main\b/, '</head>\n<body>\n<main')}\n</body>\n</html>\n`;
 const cells = runs.flatMap((r) => r.cells);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const sec = (ms) => (ms === undefined ? '—' : ms >= 10000 ? `${(ms / 1000).toFixed(0)} s` : `${(ms / 1000).toFixed(1)} s`);
+const sec = (ms) => (ms === undefined ? '—' : ms >= 10000 ? `${(ms / 1000).toFixed(0)} s` : ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms)} ms`);
 
 const NAMES = {
   'gemini-nano': ['Gemini Nano', 'Prompt API · Chrome built-in'],
@@ -200,7 +200,7 @@ pre { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6p
   <li><span><strong>Gemini Nano matches or beats a 0.5B in-page model on every suite</strong>: sentiment accuracy ${f3(s.nanoSent, 'accuracy')} vs ${f3(s.qwenSent, 'accuracy')}, extraction field accuracy ${f3(s.nanoExt, 'fields')} vs ${f3(s.qwenExt, 'fields')}${s.nanoTr && s.qwenTr ? `, translation chrF ${f3(s.nanoTr, 'chrF')} vs ${f3(s.qwenTr, 'chrF')}` : ''}.</span></li>
   <li><span><strong>It is also faster on CPU</strong>. Median time to first token ${sec(s.nanoSent?.summary.ttftMs?.p50)} vs ${sec(s.qwenSent?.summary.ttftMs?.p50)} on sentiment; a summary takes ${sec(lat(s.nanoSum))} vs ${sec(lat(s.qwenSum))}. Chrome's native CPU inference outruns ONNX Runtime Web's Wasm backend by a wide margin.</span></li>
   <li><span><strong>Chrome's Summarizer API ignores <code>format: "plain-text"</code> on this build, and misbehaves with it.</strong> In tl;dr mode it returned a Markdown news article every time (${s.tldr?.results.filter((r) => r.output?.startsWith('#')).length ?? 0} of 12), averaging ${s.tldr?.summary.scores.words.toFixed(0)} words for ~100-word inputs, with invented placeholders such as “[Region Name]”. In key-points mode, ${s.kp ? s.kp.results.filter((r) => { const l = (r.output ?? '').split('\n').filter(Boolean); return l.filter((x) => x.trim().endsWith('?')).length > l.length / 2; }).length : 0} of 12 answers were bullet lists of <em>questions about</em> the article. Key points in Markdown format, the API default, looked right in a spot check. The Prompt API with a plain instruction scores ROUGE-L ${f3(s.nanoSum, 'rougeL')} against ${f3(s.tldr, 'rougeL')} for the Summarizer.</span></li>
-  ${s.tr ? `<li><span><strong>The dedicated Translator API is the best translator here</strong>: chrF ${f3(s.tr, 'chrF')} at ${sec(lat(s.tr))} per sentence, against ${f3(s.nanoTr, 'chrF')} for the general Prompt API.</span></li>` : ''}
+  ${s.tr ? `<li><span><strong>Chrome's Translator API matches Gemini Nano on translation at a fraction of the latency</strong>: chrF ${f3(s.tr, 'chrF')} vs ${f3(s.nanoTr, 'chrF')}, with the exact reference phrasing in ${Math.round(s.tr.summary.scores.exact * 100)}% vs ${Math.round(s.nanoTr.summary.scores.exact * 100)}% of sentences, at ${sec(lat(s.tr))} vs ${sec(lat(s.nanoTr))} per sentence. On first use it fails until Chrome has installed its translation runtime and language pack, with errors that don't say so; the runner retries until the install finishes.</span></li>` : ''}
   <li><span><strong>Gemma 3's q4 ONNX builds don't run on Transformers.js Wasm</strong> (ONNX Runtime Web lacks <code>GatherBlockQuantized</code> on Wasm), and WebLLM on a software WebGPU adapter loses the device. Browser AI on machines without a GPU is, in practice, built-in AI or a small model on Wasm.</span></li>
 </ol>
 
@@ -218,7 +218,7 @@ ${['sentiment', 'summarization', 'extraction', 'translation'].map(suiteSection).
   </div>
   <div>
     <h2>What is missing</h2>
-    <p>Chrome's Translator API could not create an en→de translator in this setup (“The translation service count exceeded the limitation”), although the language pack shows as installed, so it has no score here.</p>
+    ${s.tr ? '' : `<p>Chrome's Translator API could not create an en→de translator in this run, so it has no score here.</p>`}
     <p>Phi-4-mini needs Edge Dev or Canary on Windows or macOS with a GPU. Gemma 3 via WebLLM and Transformers.js WebGPU need a WebGPU adapter with <code>shader-f16</code>. The same config measures them on a GPU machine, and the report tool merges runs from several machines:</p>
     <pre>pnpm wae run --config showcase.config.ts
 pnpm wae report results/cpu.json results/gpu.json</pre>

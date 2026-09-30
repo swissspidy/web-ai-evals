@@ -14,6 +14,11 @@ export const mockAdapter: BackendAdapter = {
     return { availability: 'available' };
   },
   async load(spec, _task, ctx) {
+    // Simulate a backend that fails its first loads, e.g. while a model is still installing.
+    const failLoads = Number(spec.options?.failLoads ?? 0);
+    const attempt = (loadAttempts.get(spec.id) ?? 0) + 1;
+    loadAttempts.set(spec.id, attempt);
+    if (attempt <= failLoads) throw new Error(String(spec.options?.loadError ?? 'mock load failure'));
     const loadDelay = Number(spec.options?.loadDelayMs ?? 0);
     for (let i = 1; i <= 4; i++) {
       await sleep(loadDelay / 4, ctx.signal);
@@ -47,6 +52,8 @@ export const mockAdapter: BackendAdapter = {
     };
   },
 };
+
+const loadAttempts = new Map<string, number>();
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {

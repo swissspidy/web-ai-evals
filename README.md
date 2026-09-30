@@ -30,7 +30,7 @@ suite (JSONL) × backends × browsers  ──►  results/<runId>.json  ──�
 | Prompt API (Gemini Nano, Chrome) | `prompt-api` | ✅ Chrome 154 Stable, Linux, CPU backend |
 | Prompt API (Phi-4-mini, Edge) | `prompt-api` | ⚠️ needs Edge Dev/Canary on Windows/macOS with a GPU |
 | Summarizer / Writer / Rewriter | `summarizer`, `writer`, `rewriter` | ✅ Summarizer on Chrome 154 (see the known issue with `plain-text`); Writer and Rewriter need the `writing-apis` flag preset |
-| Translator | `translator` | ⚠️ Chrome 154 in automation: "translation service count exceeded" ([details](docs/browser-automation.md#known-api-issues-seen-during-runs-chrome-154-stable-linux-cpu-backend)) |
+| Translator | `translator` | ✅ Chrome 154 (fails on first use until Chrome installs the translation runtime; the runner retries — [details](docs/browser-automation.md#known-api-issues-seen-during-runs-chrome-154-stable-linux-cpu-backend)) |
 | Classifier (WebAI Studio extension polyfill) | `classifier` | ⚠️ needs the extension installed in the profile |
 | WebLLM | `webllm` | ⚠️ needs a WebGPU adapter; SwiftShader loses the device |
 | Transformers.js WebGPU | `transformers` + `device: webgpu` | ⚠️ needs a WebGPU adapter with `shader-f16` for q4f16 |
@@ -264,6 +264,8 @@ Headline results:
 - Gemini Nano matches or beats the 0.5B in-page model on every suite
   (sentiment 0.900 vs 0.767, translation chrF 0.860 vs 0.496).
 - Gemini Nano is 2–9× faster on CPU.
+- Chrome's Translator API matches Gemini Nano on translation (chrF 0.854 vs
+  0.860) at 20 ms per sentence instead of 1.8 s.
 - Chrome's Summarizer API misbehaves with `format: "plain-text"`.
 
 GPU backends (Phi-4-mini, Gemma 3 via WebLLM and Transformers.js WebGPU) need a

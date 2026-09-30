@@ -30,6 +30,8 @@ export interface LoadOptions {
   timeoutMs?: number;
   /** Retry the load when no progress event arrives for this long. Default 5 min. */
   stallMs?: number;
+  /** Wait between retries while a model is still installing. Default 15 s. */
+  installRetryMs?: number;
   onProgress?: (event: ProgressEvent) => void;
 }
 
@@ -40,6 +42,11 @@ export interface RunRequestOptions {
 }
 
 type PageLoadReport = Omit<LoadReport, 'availabilityBefore' | 'downloaded' | 'coldStarts'>;
+
+/** Errors Chrome's Translator returns while its runtime or language pack is still installing. */
+const INSTALLING_ERROR = /Unable to create translator for the given source and target language|translation service count exceeded/i;
+const INSTALL_RETRY_MS = 15_000;
+const MAX_INSTALL_RETRIES = 20;
 
 const BACKEND_DEAD = /device (was )?lost|disposed|Instance reference no longer exists|session.*destroyed|crashed/i;
 
@@ -148,6 +155,7 @@ export class BrowserSession {
     const stallMs = options.stallMs ?? 5 * 60_000;
     const deadline = Date.now() + timeoutMs;
     let report: PageLoadReport;
+    let installRetries = 0;
     for (let attempt = 1; ; attempt++) {
       let lastProgress = Date.now();
       const inner: ((e: ProgressEvent) => void) | undefined = this.progressHandler;
@@ -182,7 +190,18 @@ export class BrowserSession {
         }),
       ]).finally(() => clearTimeout(timer));
       this.progressHandler = inner;
-      if (report.status !== 'timeout' || Date.now() > deadline || attempt >= 3) break;
+      // On first use, Translator.create() fails immediately while Chrome is still installing the
+      // TranslateKit runtime and the language pack, instead of waiting for them. Retry (with a
+      // fresh user activation) until the install finishes.
+      const installing = report.status === 'error' && INSTALLING_ERROR.test(report.error ?? '');
+      const retryMs = options.installRetryMs ?? INSTALL_RETRY_MS;
+      if (installing && Date.now() + retryMs < deadline && installRetries < MAX_INSTALL_RETRIES) {
+        installRetries++;
+        this.log(`${spec.id}: ${report.error}; the model is probably still installing, retrying in ${retryMs / 1000} s`);
+        await new Promise((r) => setTimeout(r, retryMs));
+        continue;
+      }
+      if (report.status !== 'timeout' || Date.now() > deadline || attempt >= 3 + installRetries) break;
       this.log(`${spec.id}: ${report.error}; reloading the page and retrying (attempt ${attempt + 1})`);
       this.current = undefined;
       await this.resetPage();
