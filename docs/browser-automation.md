@@ -82,6 +82,41 @@ backend):
 - The first download took about 2 minutes.
 - Sentiment classification takes about 1.4 s TTFT per example.
 
+## Gemma 4 as the built-in model
+
+Chrome 154 has a flag, `chrome://flags/#gemma4-for-built-in-ai` ("Gemma 4 for
+Built-in AI"), that switches every built-in API (Prompt, Summarizer, Writer, …)
+from Gemini Nano to Gemma 4. Behind the flag are two features:
+`AIApiFoundationalModel:model_version/v4` and `OptimizationGuideManifestBroker`.
+The `gemma4` preset turns both on.
+
+Use it with a separate browser id, for example `chrome-gemma4` as in
+`showcase.config.ts`. Each browser id gets its own profile, so Gemini Nano and
+Gemma 4 can be compared in one run.
+
+What we saw on Chrome 154 (Linux, 4-core VM, no GPU):
+
+- **Download works.** The model is `gemma4-2b-it`, base version
+  2026.06.10.0000, component 2026.8.7.929, about 2.4 GB. The manifest broker
+  stores it under `OptGuideManifestModel/<asset hash>/<version>/`, not
+  `OptGuideOnDeviceModel/`. The runner reads both layouts, so Gemma 4 cells
+  record the right model and version.
+- **Chrome is willing to run it.** `chrome://on-device-internals` shows
+  `prompt_api_gemma4` as Available and a `gemma4_cpu_model` on the CPU backend.
+- **It doesn't run without a GPU.** Every `create()` fails with "The device is
+  unable to create a session to run the model". The model service aborts while
+  it initializes: SIGILL on a deliberate `ud1` trap, just after
+  `litert::ml_drift::CreateDelegate` in `libLiteRtWebGpuAccelerator.so`. So
+  LiteRT always sets up its WebGPU accelerator, even for the CPU model, and
+  aborts when there is no GPU adapter. A software adapter (the `unsafe-webgpu`
+  preset, SwiftShader) aborts the same way.
+- **`availability()` misleads here too.** It returns `available` for every
+  task, so the failure only shows up when `create()` is called.
+- **Chrome stops retrying.** After three crashes Chrome refuses to load the
+  version. `web-ai-evals doctor` prints the crash count and flags this.
+
+On a machine with a GPU, this is the path to test next.
+
 ## Headless
 
 Checked with Chrome 154 on Linux. Once the model is in the profile, the Prompt

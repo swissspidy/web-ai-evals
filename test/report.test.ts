@@ -138,3 +138,38 @@ describe('review fixes', () => {
     expect(renderMarkdown([run('a', [c])])).toContain('| a\\|b |');
   });
 });
+
+describe('builtInModelVersions', () => {
+  it('reads Nano from OptGuideOnDeviceModel and Gemma 4 from OptGuideManifestModel', async () => {
+    const { mkdtemp, mkdir, writeFile } = await import('node:fs/promises');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    const { builtInModelVersions } = await import('@web-ai-evals/runner');
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'wae-profile-'));
+    const manifest = (name: string, version: string) => JSON.stringify({ version: 'x', BaseModelSpec: { name, version } });
+    await mkdir(path.join(dir, 'OptGuideOnDeviceModel', '2025.8.21.1028'), { recursive: true });
+    await writeFile(path.join(dir, 'OptGuideOnDeviceModel', '2025.8.21.1028', 'manifest.json'), manifest('v3Nano', '2025.08.14.1358'));
+    await mkdir(path.join(dir, 'OptGuideManifestModel', 'abc123', '2026.8.7.929'), { recursive: true });
+    await writeFile(path.join(dir, 'OptGuideManifestModel', 'abc123', '2026.8.7.929', 'manifest.json'), manifest('gemma4-2b-it', '2026.06.10.0000'));
+    await writeFile(
+      path.join(dir, 'Local State'),
+      JSON.stringify({
+        optimization_guide: {
+          on_device: { performance_class: 8, model_crash_count: 1 },
+          model_execution: {
+            manifest_asset_ledger: {
+              abc123: { asset_id: 'gemma4_component', requested_version: '2026.8.7.929' },
+              def456: { asset_id: 'nano_v3_cpu_component', requested_version: '2025.8.21.1028' },
+            },
+          },
+        },
+      }),
+    );
+    const nano = await builtInModelVersions(dir);
+    expect(nano).toMatchObject({ baseModel: 'v3Nano', onDeviceModel: '2025.8.21.1028', activeAsset: 'nano_v3_cpu_component', modelCrashCount: '1' });
+    const gemma = await builtInModelVersions(dir, { preferGemma4: true });
+    expect(gemma).toMatchObject({ baseModel: 'gemma4-2b-it', baseModelVersion: '2026.06.10.0000', onDeviceModel: '2026.8.7.929', activeAsset: 'gemma4_component' });
+    expect(gemma?.installedModels).toBe('v3Nano@2025.8.21.1028, gemma4-2b-it@2026.8.7.929');
+    expect(await builtInModelVersions(await mkdtemp(path.join(os.tmpdir(), 'wae-empty-')))).toBeUndefined();
+  });
+});

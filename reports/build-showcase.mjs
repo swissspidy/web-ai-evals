@@ -24,9 +24,12 @@ const NAMES = {
   'chrome-summarizer': ['Summarizer API', 'Chrome built-in · tl;dr mode'],
   'chrome-summarizer-keypoints': ['Summarizer API', 'Chrome built-in · key-points mode'],
   'chrome-translator': ['Translator API', 'Chrome built-in'],
+  'gemma4-builtin': ['Gemma 4 2B', 'Prompt API · Chrome built-in (Gemma 4 flag)'],
 };
 const ORDER = Object.keys(NAMES);
-const SLOT = { 'gemini-nano': 1, 'qwen2.5-0.5b-tjs-wasm': 2, 'chrome-summarizer': 3, 'chrome-summarizer-keypoints': 4, 'chrome-translator': 5, 'phi-4-mini': 6, 'gemma3-1b-webllm': 7, 'gemma3-1b-tjs-webgpu': 8 };
+// Colours follow the backend. Key-points only appears in summarization and the Translator only in
+// translation, so they share slot 4 and slot 5 is free for Gemma 4.
+const SLOT = { 'gemini-nano': 1, 'qwen2.5-0.5b-tjs-wasm': 2, 'chrome-summarizer': 3, 'chrome-summarizer-keypoints': 4, 'chrome-translator': 4, 'gemma4-builtin': 5, 'phi-4-mini': 6, 'gemma3-1b-webllm': 7, 'gemma3-1b-tjs-webgpu': 8 };
 
 const SUITES = {
   sentiment: { title: 'Sentiment classification', metric: 'accuracy', metricLabel: 'Accuracy', blurb: '60 short reviews and statements, three labels. 20 of them are hard: sarcasm, negation, litotes, mixed verdicts.' },
@@ -37,7 +40,7 @@ const SUITES = {
 
 const run = runs[0];
 const num = (v) => (Number.isFinite(Number(v)) ? String(Number(v)) : '?');
-const GPU_BACKENDS = ['phi-4-mini', 'gemma3-1b-webllm', 'gemma3-1b-tjs-webgpu'];
+const GPU_BACKENDS = ['phi-4-mini', 'gemma4-builtin', 'gemma3-1b-webllm', 'gemma3-1b-tjs-webgpu'];
 const gpuMeasured = cells.some((c) => GPU_BACKENDS.includes(c.backend.id) && c.load.status === 'ok');
 
 /** One line per machine, from any cell of that run (loaded or not). */

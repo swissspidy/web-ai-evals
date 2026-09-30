@@ -23,6 +23,9 @@ const presets = [
 const browsers = [
   { id: 'chrome', channel: 'chrome' as const, presets },
   { id: 'edge', channel: 'msedge-dev' as const, presets },
+  // Same Chrome with chrome://flags/#gemma4-for-built-in-ai on, in its own profile, so the
+  // built-in APIs run Gemma 4 instead of Gemini Nano. Needs a GPU (see docs/browser-automation.md).
+  { id: 'chrome-gemma4', channel: 'chrome' as const, presets: [...presets, 'gemma4'] },
 ].filter((b) => !process.env.WAE_BROWSERS || process.env.WAE_BROWSERS.split(',').includes(b.id));
 
 const generation = { maxTokens: 256, temperature: 0 };
@@ -33,6 +36,7 @@ export default defineConfig({
   backends: [
     { id: 'gemini-nano', kind: 'prompt-api', browsers: ['chrome'] },
     { id: 'phi-4-mini', kind: 'prompt-api', browsers: ['edge'] },
+    { id: 'gemma4-builtin', kind: 'prompt-api', browsers: ['chrome-gemma4'] },
     { id: 'gemma3-1b-webllm', kind: 'webllm', model: 'gemma3-1b-it-q4f16_1-MLC', generation, browsers: ['chrome'] },
     {
       id: 'gemma3-1b-tjs-webgpu',

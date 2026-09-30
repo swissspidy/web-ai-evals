@@ -13,36 +13,48 @@ export function hostInfo() {
   };
 }
 
+interface InstalledModel {
+  /** Component version, e.g. "2025.8.21.1028". */
+  component: string;
+  /** Asset id from Local State's ledger, e.g. "nano_v3_cpu_component" or "gemma4_component". */
+  asset?: string;
+  baseModel?: string;
+  baseModelVersion?: string;
+}
+
+async function readManifest(dir: string): Promise<{ baseModel?: string; baseModelVersion?: string }> {
+  try {
+    const m = JSON.parse(await readFile(path.join(dir, 'manifest.json'), 'utf8')) as { BaseModelSpec?: { name?: string; version?: string } };
+    return { baseModel: m.BaseModelSpec?.name, baseModelVersion: m.BaseModelSpec?.version };
+  } catch {
+    return {};
+  }
+}
+
 /**
- * Built-in model versions are not exposed to JavaScript. Chrome stores the
- * on-device model under `<profile>/OptGuideOnDeviceModel/<version>/` and the
- * component manifest under `OptimizationGuideModelsManifest/<version>/`, so we
- * read the versions from disk. Returns undefined when nothing is installed.
+ * Built-in model versions are not exposed to JavaScript, so we read them from
+ * the profile. Chrome uses two layouts:
+ * - `OptGuideOnDeviceModel/<version>/` for Gemini Nano, and
+ * - `OptGuideManifestModel/<asset hash>/<version>/` for models installed by the
+ *   manifest broker (e.g. Gemma 4 via chrome://flags/#gemma4-for-built-in-ai).
+ * Each carries a `manifest.json` naming the base model. Local State's asset
+ * ledger maps the hash directories to asset ids. When a profile holds several
+ * models, `preferGemma4` (the Gemma 4 flag is on) picks the active one.
+ * Returns undefined when nothing is installed.
  */
-export async function builtInModelVersions(profileDir: string): Promise<Record<string, string> | undefined> {
+export async function builtInModelVersions(
+  profileDir: string,
+  options: { preferGemma4?: boolean } = {},
+): Promise<Record<string, string> | undefined> {
   const out: Record<string, string> = {};
-  const dirs: Array<[string, string]> = [
-    ['onDeviceModel', 'OptGuideOnDeviceModel'],
-    ['modelsManifest', 'OptimizationGuideModelsManifest'],
-  ];
-  for (const [key, dir] of dirs) {
-    const version = await latestVersionDir(path.join(profileDir, dir));
-    if (version) out[key] = version;
-  }
-  // The component manifest names the base model and its version, e.g. v3Nano 2025.06.30.1229.
-  if (out.onDeviceModel) {
-    const manifest = await readFile(path.join(profileDir, 'OptGuideOnDeviceModel', out.onDeviceModel, 'manifest.json'), 'utf8').catch(() => undefined);
-    if (manifest) {
-      try {
-        const m = JSON.parse(manifest) as { BaseModelSpec?: { name?: string; version?: string } };
-        if (m.BaseModelSpec?.name) out.baseModel = m.BaseModelSpec.name;
-        if (m.BaseModelSpec?.version) out.baseModelVersion = m.BaseModelSpec.version;
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-  // Local State records the device performance class and which asset was requested.
+  const manifestVersion = await latestVersionDir(path.join(profileDir, 'OptimizationGuideModelsManifest'));
+  if (manifestVersion) out.modelsManifest = manifestVersion;
+
+  const installed: InstalledModel[] = [];
+  const legacy = await latestVersionDir(path.join(profileDir, 'OptGuideOnDeviceModel'));
+  if (legacy) installed.push({ component: legacy, ...(await readManifest(path.join(profileDir, 'OptGuideOnDeviceModel', legacy))) });
+
+  let ledger: Record<string, { asset_id?: string; requested_version?: string }> = {};
   const localState = await readFile(path.join(profileDir, 'Local State'), 'utf8').catch(() => undefined);
   if (localState) {
     try {
@@ -50,14 +62,36 @@ export async function builtInModelVersions(profileDir: string): Promise<Record<s
       const od = og?.on_device;
       if (od?.performance_class !== undefined) out.performanceClass = String(od.performance_class);
       if (od?.vram_mb !== undefined) out.vramMb = String(od.vram_mb);
-      const ledger = og?.model_execution?.manifest_asset_ledger as Record<string, { asset_id?: string; requested_version?: string }> | undefined;
-      for (const entry of Object.values(ledger ?? {})) {
+      if (od?.model_crash_count !== undefined) out.modelCrashCount = String(od.model_crash_count);
+      ledger = og?.model_execution?.manifest_asset_ledger ?? {};
+      for (const entry of Object.values(ledger)) {
         if (entry.asset_id) out[`asset:${entry.asset_id}`] = entry.requested_version ?? '';
       }
     } catch {
       /* ignore */
     }
   }
+  for (const [hash, entry] of Object.entries(ledger)) {
+    const dir = path.join(profileDir, 'OptGuideManifestModel', hash);
+    const version = entry.requested_version ?? (await latestVersionDir(dir));
+    if (!version) continue;
+    const m = await readManifest(path.join(dir, version));
+    // Only count models whose files are actually on disk.
+    if (m.baseModel) installed.push({ component: version, asset: entry.asset_id, ...m });
+  }
+  // The legacy directory holds Nano; tag it with its asset id when the ledger has one.
+  const nanoAsset = Object.values(ledger).find((e) => e.asset_id?.startsWith('nano') && e.requested_version === legacy);
+  if (legacy && installed[0] && !installed[0].asset && nanoAsset?.asset_id) installed[0].asset = nanoAsset.asset_id;
+
+  const isGemma4 = (m: InstalledModel) => /gemma4/i.test(`${m.baseModel ?? ''} ${m.asset ?? ''}`);
+  const active = installed.find((m) => (options.preferGemma4 ? isGemma4(m) : !isGemma4(m))) ?? installed[0];
+  if (active) {
+    out.onDeviceModel = active.component;
+    if (active.asset) out.activeAsset = active.asset;
+    if (active.baseModel) out.baseModel = active.baseModel;
+    if (active.baseModelVersion) out.baseModelVersion = active.baseModelVersion;
+  }
+  if (installed.length > 1) out.installedModels = installed.map((m) => `${m.baseModel ?? '?'}@${m.component}`).join(', ');
   return Object.keys(out).length ? out : undefined;
 }
 
@@ -84,7 +118,7 @@ export async function dirBytes(profileDir: string): Promise<number> {
       else if (e.isFile()) total += (await stat(p).catch(() => ({ size: 0 }))).size;
     }
   };
-  for (const d of ['OptGuideOnDeviceModel', 'component_crx_cache', 'TranslateKit', 'optimization_guide_model_store']) {
+  for (const d of ['OptGuideOnDeviceModel', 'OptGuideManifestModel', 'component_crx_cache', 'TranslateKit', 'optimization_guide_model_store']) {
     await walk(path.join(profileDir, d), 0);
   }
   return total;

@@ -264,7 +264,8 @@ export class BrowserSession {
     const env = await this.pageEnvironment();
     const host = hostInfo();
     const cfg = this.options.browser;
-    const builtIn = BUILT_IN_KINDS.has(spec.kind) ? await builtInModelVersions(this.browser.profileDir) : undefined;
+    const preferGemma4 = this.browser.flags.some((f) => f.includes('AIApiFoundationalModel:model_version/v4'));
+    const builtIn = BUILT_IN_KINDS.has(spec.kind) ? await builtInModelVersions(this.browser.profileDir, { preferGemma4 }) : undefined;
     const brand = env.fullVersionList?.find((b) => /Chrome|Edge|Chromium/.test(b.brand) && !/Not/.test(b.brand));
     return {
       browser: {
