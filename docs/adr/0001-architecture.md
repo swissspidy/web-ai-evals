@@ -2,6 +2,9 @@
 
 - Status: Accepted
 - Date: 2026-09-29
+- Update (2026-10-07): the `@web-ai-evals/*` packages below were merged into
+  one npm package, `web-ai-evals`, with the same modules as directories under
+  `packages/web-ai-evals/src/`. The architecture is unchanged.
 
 ## Context
 
@@ -142,7 +145,7 @@ interface LoadedBackend {
 ### 3. Result schema
 
 One JSON file per run (`results/<runId>.json`), versioned with
-`schemaVersion`. Its shape (see `packages/core/src/types.ts` for the source of
+`schemaVersion`. Its shape (see `packages/web-ai-evals/src/core/types.ts` for the source of
 truth):
 
 ```ts
@@ -150,7 +153,7 @@ interface RunFile {
   schemaVersion: 1;
   runId: string; startedAt: string; finishedAt: string;
   name?: string;               // config name
-  tool: { name: '@web-ai-evals/runner'; version: string };
+  tool: { name: 'web-ai-evals'; version: string };   // '@web-ai-evals/runner' before 0.1.0
   host: { platform; release; arch; cpuModel?; cores; memoryBytes };
   cells: CellResult[];         // one per dataset × backend × browser
   notes?: string[];

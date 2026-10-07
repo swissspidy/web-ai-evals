@@ -1,9 +1,9 @@
 {
-  "name": "web-ai-evals",
+  "name": "web-ai-evals-monorepo",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
-  "packageManager": "pnpm@10.33.0",
+  "packageManager": "pnpm@12.10.1",
   "engines": {
     "node": ">=24"
   },
@@ -11,23 +11,20 @@
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
     "test": "vitest run",
-    "wae": "node packages/runner/dist/cli.js"
+    "wae": "web-ai-evals",
+    "changeset": "changeset",
+    "version-packages": "changeset version && pnpm install --lockfile-only",
+    "release": "pnpm run build && changeset publish",
+    "lint:publish": "pnpm --filter web-ai-evals exec publint --strict"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
     "@types/node": "^26.6.3",
-    "esbuild": "^0.28.2",
     "playwright": "^1.63.0",
+    "publint": "^0.3.25",
     "typescript": "^5.9.3",
     "vitest": "^5.0.2",
-    "@web-ai-evals/core": "workspace:*",
-    "@web-ai-evals/runner": "workspace:*",
-    "@web-ai-evals/scorers": "workspace:*",
-    "@web-ai-evals/report": "workspace:*",
-    "@web-ai-evals/page-runtime": "workspace:*"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
+    "web-ai-evals": "workspace:*"
   }
 }

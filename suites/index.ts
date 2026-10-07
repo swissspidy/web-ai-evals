@@ -2,8 +2,8 @@
  * Example suites shipped with web-ai-evals. All data in this directory was
  * written for this project and is released under CC0-1.0 (see LICENSE).
  */
-import { chrF, classification, contains, jsonFieldMatch, jsonSchema, rougeL, wordCount } from '@web-ai-evals/scorers';
-import type { SuiteConfig } from '@web-ai-evals/runner';
+import { chrF, classification, contains, jsonFieldMatch, jsonSchema, rougeL, wordCount } from 'web-ai-evals/scorers';
+import type { SuiteConfig } from 'web-ai-evals';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 

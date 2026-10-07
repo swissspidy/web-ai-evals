@@ -1,0 +1,9 @@
+{
+  "name": "promptfoo-example",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "promptfoo": "^0.123.1",
+    "web-ai-evals": "workspace:*"
+  }
+}

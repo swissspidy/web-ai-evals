@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Example, TaskDefinition } from '@web-ai-evals/core';
-import { chrF, classification, contains, exactMatch, jsonFieldMatch, jsonSchema, jsonValid, rougeL } from '@web-ai-evals/scorers';
+import type { Example, TaskDefinition } from 'web-ai-evals';
+import { chrF, classification, contains, exactMatch, jsonFieldMatch, jsonSchema, jsonValid, rougeL } from 'web-ai-evals/scorers';
 
 const task: TaskDefinition = { type: 'generate' };
 const ctx = (output: string, expected: unknown, extra: Partial<Example> = {}) => {

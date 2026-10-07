@@ -1,3 +1,11 @@
 packages:
   - packages/*
-  - integrations/*
+  - examples/*
+
+# Only esbuild needs its install script (it fetches its platform binary).
+allowBuilds:
+  esbuild: true
+  '@playwright/browser-chromium': false
+  '@swc/core': false
+  onnxruntime-node: false
+  protobufjs: false

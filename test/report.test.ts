@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { CellResult, RunFile } from '@web-ai-evals/core';
-import { diffRuns, renderDiff, renderMarkdown, renderReport } from '@web-ai-evals/report';
+import type { CellResult, RunFile } from 'web-ai-evals';
+import { diffRuns, renderDiff, renderMarkdown, renderReport } from 'web-ai-evals/report';
 
 function cell(browser: string, version: string, modelVersion: string, accuracy: number, ttft: number, output = 'positive'): CellResult {
   const dist = (v: number) => ({ n: 1, mean: v, p50: v, p90: v, p95: v, min: v, max: v });
@@ -80,7 +80,7 @@ describe('latestRun', () => {
     const { mkdtemp, writeFile } = await import('node:fs/promises');
     const os = await import('node:os');
     const path = await import('node:path');
-    const { latestRun } = await import('@web-ai-evals/runner');
+    const { latestRun } = await import('web-ai-evals');
     const dir = await mkdtemp(path.join(os.tmpdir(), 'wae-hist-'));
     const mk = (id: string, name: string) => ({ ...run(id, [cell('chrome', '154', 'v1', 1, 100)]), name });
     await writeFile(path.join(dir, '2026-09-01.json'), JSON.stringify(mk('old', 'n')));
@@ -144,7 +144,7 @@ describe('builtInModelVersions', () => {
     const { mkdtemp, mkdir, writeFile } = await import('node:fs/promises');
     const os = await import('node:os');
     const path = await import('node:path');
-    const { builtInModelVersions } = await import('@web-ai-evals/runner');
+    const { builtInModelVersions } = await import('web-ai-evals');
     const dir = await mkdtemp(path.join(os.tmpdir(), 'wae-profile-'));
     const manifest = (name: string, version: string) => JSON.stringify({ version: 'x', BaseModelSpec: { name, version } });
     await mkdir(path.join(dir, 'OptGuideOnDeviceModel', '2025.8.21.1028'), { recursive: true });

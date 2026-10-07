@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+# Queue rather than cancel: interrupting a run halfway through publishing
+# would leave the version on npm without its tag and GitHub release.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Version or publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the version branch, tags and GitHub releases
+      pull-requests: write # open and update the "Version packages" PR
+      id-token: write # npm trusted publishing and provenance
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # Installs pnpm from packageManager, Node from .node-version, and runs
+      # the install itself. No .npmrc is written, so nothing carries registry
+      # credentials into the install and build below. No dependency cache:
+      # what gets published must not be built from a cache other workflows write.
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          require-lockfile: true
+      - run: pnpm run build
+      # Publishing uses npm trusted publishing: pnpm exchanges the job's OIDC
+      # token (id-token: write above) for a short-lived npm credential, so no
+      # npm secret is involved. Provenance comes from publishConfig.provenance
+      # in the package, and prepack runs the minified release build.
+      - name: Create release pull request or publish
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          version-script: pnpm run version-packages
+          publish-script: pnpm exec changeset publish
+          commit-message: "Version packages"
+          pr-title: "Version packages"

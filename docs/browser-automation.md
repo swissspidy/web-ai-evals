@@ -23,7 +23,7 @@ September 2026.
 ## Playwright's default switches break built-in AI
 
 Playwright launches Chromium with switches that are sensible for web testing but
-fatal here. `packages/runner/src/browsers.ts` removes them with
+fatal here. `packages/web-ai-evals/src/runner/browsers.ts` removes them with
 `ignoreDefaultArgs` and re-adds the harmless part:
 
 | Default switch | Effect on built-in AI |
