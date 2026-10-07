@@ -1,0 +1,92 @@
+{
+  "name": "web-ai-evals",
+  "version": "0.0.0",
+  "description": "Run and compare LLM evals inside real browsers: Chrome and Edge built-in AI, WebLLM and Transformers.js",
+  "keywords": [
+    "llm",
+    "evals",
+    "web-ai",
+    "browser",
+    "built-in-ai",
+    "prompt-api",
+    "gemini-nano",
+    "webgpu",
+    "webllm",
+    "transformers.js",
+    "playwright",
+    "promptfoo"
+  ],
+  "license": "Apache-2.0",
+  "author": "Pascal Birchler",
+  "homepage": "https://github.com/swissspidy/web-ai-evals#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swissspidy/web-ai-evals.git",
+    "directory": "packages/web-ai-evals"
+  },
+  "bugs": {
+    "url": "https://github.com/swissspidy/web-ai-evals/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "web-ai-evals": "./dist/runner/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./scorers": {
+      "types": "./dist/scorers/index.d.ts",
+      "default": "./dist/scorers/index.js"
+    },
+    "./report": {
+      "types": "./dist/report/index.d.ts",
+      "default": "./dist/report/index.js"
+    },
+    "./promptfoo": {
+      "types": "./dist/promptfoo/provider.d.ts",
+      "default": "./dist/promptfoo/provider.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node build-runtime.mjs",
+    "build:release": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.json --sourceMap false --declarationMap false && node build-runtime.mjs --release",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p src/page-runtime/tsconfig.json",
+    "prepack": "pnpm run build:release"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "playwright": "^1.63.0"
+  },
+  "peerDependencies": {
+    "@huggingface/transformers": "^4.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@huggingface/transformers": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@huggingface/transformers": "^4.3.0",
+    "@mlc-ai/web-llm": "^0.2.85",
+    "@types/node": "^26.6.3",
+    "@webgpu/types": "^0.1.74",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3"
+  }
+}

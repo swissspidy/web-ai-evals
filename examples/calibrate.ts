@@ -6,9 +6,8 @@
  *
  *   node examples/calibrate.ts
  */
-import { parseJsonl, resolveInput, type BackendSpec, type TaskDefinition } from '@web-ai-evals/core';
-import { BrowserSession } from '@web-ai-evals/runner';
-import { classification } from '@web-ai-evals/scorers';
+import { BrowserSession, parseJsonl, resolveInput, type BackendSpec, type TaskDefinition } from 'web-ai-evals';
+import { classification } from 'web-ai-evals/scorers';
 import { readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';

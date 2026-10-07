@@ -6,4 +6,3 @@ results/*
 reports/local/
 *.log
 .DS_Store
-packages-out/

@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -15,21 +19,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      # Installs pnpm from packageManager, Node from .node-version, and runs
+      # the install itself. require-lockfile makes that install --frozen-lockfile
+      # and fails outright if the lockfile has gone missing.
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
         with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          cache: true
+          require-lockfile: true
       - run: pnpm build
       - run: pnpm typecheck
+      - run: pnpm lint:publish
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test
       - name: Smoke run (mock backend, headless Chromium)
         run: pnpm wae run --config examples/smoke.config.ts
       - name: Promptfoo provider (mock backend)
-        working-directory: integrations/promptfoo
-        run: npx promptfoo eval -c example/promptfooconfig.yaml --no-cache --no-write || test $? -eq 100
-      - name: Pack the npm packages
-        # Release build of every package, as .github/workflows/release.yml publishes them.
-        run: node scripts/pack.mjs
+        working-directory: examples/promptfoo
+        run: pnpm exec promptfoo eval -c promptfooconfig.yaml --no-cache --no-write || test $? -eq 100

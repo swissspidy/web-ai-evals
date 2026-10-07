@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { distribution, extractJson, matchLabel, parseJsonl, renderPrompt, resolveInput } from '@web-ai-evals/core';
+import { distribution, extractJson, matchLabel, parseJsonl, renderPrompt, resolveInput } from 'web-ai-evals';
 
 describe('parseJsonl', () => {
   it('parses examples, skips blanks and comments, defaults ids', () => {

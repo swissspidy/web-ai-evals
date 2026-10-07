@@ -2,9 +2,8 @@ import { mkdtemp, readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { RunFile } from '@web-ai-evals/core';
-import { classification } from '@web-ai-evals/scorers';
-import { resolveConfig, runEvals } from '@web-ai-evals/runner';
+import { classification } from 'web-ai-evals/scorers';
+import { resolveConfig, runEvals, type RunFile } from 'web-ai-evals';
 
 /**
  * End-to-end: the real runner, server, page runtime and Playwright Chromium
@@ -66,7 +65,7 @@ describe('runner e2e (mock backend)', () => {
 
 describe('session load retries (mock backend)', () => {
   it('retries a load that fails while the model is still installing, and not other failures', async () => {
-    const { BrowserSession } = await import('@web-ai-evals/runner');
+    const { BrowserSession } = await import('web-ai-evals');
     const dir = await mkdtemp(path.join(os.tmpdir(), 'wae-retry-'));
     const session = await BrowserSession.open({
       browser: { id: 'chromium', channel: 'chromium', headless: true, proxy: false },

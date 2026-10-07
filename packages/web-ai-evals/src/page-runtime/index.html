@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>web-ai-evals runtime</title>
+  <style>
+    body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; background: #fff; color: #111; }
+    pre { background: #f4f4f4; padding: 8px; max-height: 60vh; overflow: auto; }
+    button { font: inherit; padding: 6px 12px; }
+  </style>
+</head>
+<body>
+  <h1>web-ai-evals page runtime</h1>
+  <p>Driven by <code>web-ai-evals</code>. The button below provides the user activation that built-in AI needs to start a model download.</p>
+  <button id="wae-activate" type="button">Load backend</button>
+  <p id="progress"></p>
+  <pre id="log"></pre>
+  <script type="module" src="./runtime.js"></script>
+</body>
+</html>

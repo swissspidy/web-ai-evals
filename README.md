@@ -51,14 +51,14 @@ Requires Node 24+ (for native TypeScript configs) and Google Chrome.
 ### In your own project
 
 ```sh
-npm install --save-dev @web-ai-evals/runner @web-ai-evals/scorers
+npm install --save-dev web-ai-evals
 npx web-ai-evals doctor --config evals.config.ts
 npx web-ai-evals run --config evals.config.ts
 ```
 
 Write `evals.config.ts` as shown under [Configuration](#configuration). The
 JSONL datasets in [`suites/`](suites) are a good starting point; they aren't
-part of the npm packages, so copy the ones you want.
+part of the npm package, so copy the ones you want.
 
 ### From this repository
 
@@ -89,8 +89,8 @@ backend. That needs 16 GB RAM and 4 cores.
 
 ```ts
 // evals.config.ts
-import { defineConfig } from '@web-ai-evals/runner';
-import { classification } from '@web-ai-evals/scorers';
+import { defineConfig } from 'web-ai-evals';
+import { classification } from 'web-ai-evals/scorers';
 
 export default defineConfig({
   name: 'sentiment',
@@ -125,7 +125,7 @@ export default defineConfig({
 So one dataset can drive both kinds of backend. Task types: `generate`,
 `summarize`, `write`, `rewrite`, `translate`, `classify` and `extract`.
 
-**Scorers** come from `@web-ai-evals/scorers`:
+**Scorers** come from `web-ai-evals/scorers`:
 
 | Scorer | What it measures |
 |---|---|
@@ -187,7 +187,7 @@ Summaries count failed examples as 0, so a backend can't look better by
 failing the hard ones.
 
 The full schema is in [ADR 0001](docs/adr/0001-architecture.md) and
-[packages/core/src/types.ts](packages/core/src/types.ts).
+[packages/web-ai-evals/src/core/types.ts](packages/web-ai-evals/src/core/types.ts).
 
 ## CLI
 
@@ -208,8 +208,8 @@ between two runs (drift) or between two browsers in one run
 
 ## Integrations
 
-- **Promptfoo:** [`integrations/promptfoo`](integrations/promptfoo) is a custom
-  provider. Each promptfoo prompt goes through a backend in a real browser and
+- **Promptfoo:** `web-ai-evals/promptfoo` is a custom provider
+  ([example and docs](examples/promptfoo)). Each promptfoo prompt goes through a backend in a real browser and
   comes back with `latencyMs`, token usage and `metadata.ttftMs` /
   `tokensPerSecond`.
 - **Harbor:** assessed in [docs/harbor.md](docs/harbor.md). A browser
@@ -247,32 +247,39 @@ Chrome installed.
     `doctor` shows that reason. Example output:
     [`reports/nightly-example`](reports/nightly-example).
 - **Milestone 4:** promptfoo 0.123 → provider → Chrome → Gemini Nano,
-  [`example/nano-smoke.yaml`](integrations/promptfoo/example/nano-smoke.yaml)
+  [`nano-smoke.yaml`](examples/promptfoo/nano-smoke.yaml)
   passes 3/3. The Harbor assessment is in [docs/harbor.md](docs/harbor.md).
 
 ## CI
 
 - `.github/workflows/ci.yml` runs on GitHub-hosted runners. It covers
-  typecheck, unit tests, and an end-to-end run with the mock backend in
+  typecheck, publint, unit tests, and an end-to-end run with the mock backend in
   headless Chromium plus the Promptfoo provider.
 - `.github/workflows/nightly.yml` runs on a **self-hosted GPU machine** (a Mac
   mini is ideal). It runs a small suite on Chrome Stable, Beta and Canary and
   fails when the built-in model or its quality changes. Setup is in
   [docs/self-hosted-runner.md](docs/self-hosted-runner.md).
+- `.github/workflows/release.yml` keeps a "Version packages" pull request open
+  while changesets are pending and publishes to npm when it is merged.
 
-## Packages
+## Package
 
-| Package | Role |
+Everything ships as one npm package, [`web-ai-evals`](packages/web-ai-evals):
+
+| Import | Contents |
 |---|---|
-| `@web-ai-evals/core` | Types, JSONL datasets, prompt templates, stats |
-| `@web-ai-evals/page-runtime` | In-page runner: backend adapters, availability, download progress, timing |
-| `@web-ai-evals/runner` | Node orchestrator and CLI: Playwright, persistent profiles, server, retries and timeouts |
-| `@web-ai-evals/scorers` | Scorers |
-| `@web-ai-evals/report` | HTML report, run diffs, Markdown summaries |
-| `@web-ai-evals/promptfoo` | Promptfoo provider |
+| `web-ai-evals` | `defineConfig`, `runEvals`, `BrowserSession`, types, JSONL datasets, prompt templates, stats |
+| `web-ai-evals/scorers` | Scorers |
+| `web-ai-evals/report` | HTML report, run diffs, Markdown summaries |
+| `web-ai-evals/promptfoo` | Promptfoo provider |
 
-All packages are published to npm with the same version. See
-[docs/releasing.md](docs/releasing.md).
+The source is split the same way under
+[`packages/web-ai-evals/src/`](packages/web-ai-evals/src), plus `runner/` (the
+Node orchestrator and CLI) and `page-runtime/` (the in-page backend adapters,
+bundled into `dist/www/`).
+
+Releases use [Changesets](.changeset/README.md): run `pnpm changeset` in a pull
+request that changes the package.
 
 ## First report
 

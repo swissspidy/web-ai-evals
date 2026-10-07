@@ -1,4 +1,4 @@
-import { defineConfig } from '@web-ai-evals/runner';
+import { defineConfig } from 'web-ai-evals';
 import { allSuites } from './suites/index.ts';
 
 /**

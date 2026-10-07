@@ -1,48 +1,46 @@
 name: Release
 
-# Publishes every package to npm when a v* tag is pushed (e.g. v0.1.0).
-# Uses npm trusted publishing (OIDC), so there is no npm token in the repo.
-# Setup and the first publish are described in docs/releasing.md.
 on:
   push:
-    tags: ['v*']
+    branches: [main]
 
 permissions: {}
 
+# Queue rather than cancel: interrupting a run halfway through publishing
+# would leave the version on npm without its tag and GitHub release.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  publish:
+  release:
+    name: Version or publish
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write # push the version branch, tags and GitHub releases
+      pull-requests: write # open and update the "Version packages" PR
       id-token: write # npm trusted publishing and provenance
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      # No dependency cache: release builds must not read a cache that other workflows write.
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      # Installs pnpm from packageManager, Node from .node-version, and runs
+      # the install itself. No .npmrc is written, so nothing carries registry
+      # credentials into the install and build below. No dependency cache:
+      # what gets published must not be built from a cache other workflows write.
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
         with:
-          node-version-file: .nvmrc
-          registry-url: https://registry.npmjs.org
-          package-manager-cache: false
-      - run: pnpm install --frozen-lockfile
-      - name: Pack
-        run: node scripts/pack.mjs
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
-      # Browser tests ran in CI on main; these check the release build itself.
-      - run: pnpm typecheck
-      - run: pnpm test --exclude test/e2e.test.ts
-      - name: Publish
-        # Skips versions that are already on npm, so a failed release can be re-run.
-        run: |
-          while read -r file; do
-            name=$(tar -xzOf "packages-out/$file" package/package.json | node -p 'const p = JSON.parse(require("fs").readFileSync(0, "utf8")); `${p.name}@${p.version}`')
-            # npm view prints nothing (and exits 0) for an unpublished version of an existing package.
-            if [ -n "$(npm view "$name" version 2>/dev/null)" ]; then
-              echo "$name is already published, skipping"
-            else
-              npm publish "packages-out/$file" --provenance --access public
-            fi
-          done < packages-out/order.txt
+          require-lockfile: true
+      - run: pnpm run build
+      # Publishing uses npm trusted publishing: pnpm exchanges the job's OIDC
+      # token (id-token: write above) for a short-lived npm credential, so no
+      # npm secret is involved. Provenance comes from publishConfig.provenance
+      # in the package, and prepack runs the minified release build.
+      - name: Create release pull request or publish
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          version-script: pnpm run version-packages
+          publish-script: pnpm exec changeset publish
+          commit-message: "Version packages"
+          pr-title: "Version packages"
