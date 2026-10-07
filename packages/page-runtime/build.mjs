@@ -16,7 +16,7 @@ await build({
   target: 'es2022',
   outdir: out,
   chunkNames: 'chunks/[name]-[hash]',
-  sourcemap: true,
+  sourcemap: process.env.SOURCEMAP !== '0',
   minify: process.env.MINIFY === '1',
   logLevel: 'warning',
 });

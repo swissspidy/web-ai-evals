@@ -1,8 +1,30 @@
 {
   "name": "@web-ai-evals/promptfoo",
   "version": "0.1.0",
-  "type": "module",
+  "description": "Promptfoo provider that runs prompts through in-browser AI backends (Prompt API, WebLLM, Transformers.js)",
+  "keywords": [
+    "llm",
+    "evals",
+    "web-ai",
+    "browser",
+    "built-in-ai",
+    "prompt-api",
+    "webgpu",
+    "promptfoo",
+    "promptfoo-provider"
+  ],
+  "homepage": "https://github.com/swissspidy/web-ai-evals/tree/main/integrations/promptfoo#readme",
+  "bugs": {
+    "url": "https://github.com/swissspidy/web-ai-evals/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swissspidy/web-ai-evals.git",
+    "directory": "integrations/promptfoo"
+  },
   "license": "Apache-2.0",
+  "author": "Pascal Birchler",
+  "type": "module",
   "main": "./dist/provider.js",
   "types": "./dist/provider.d.ts",
   "exports": {
@@ -18,12 +40,17 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "description": "Promptfoo provider that runs prompts through in-browser AI backends (Prompt API, WebLLM, Transformers.js)",
   "dependencies": {
     "@web-ai-evals/core": "workspace:*",
     "@web-ai-evals/runner": "workspace:*"
   },
   "devDependencies": {
     "promptfoo": "^0.123.1"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

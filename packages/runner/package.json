@@ -1,8 +1,31 @@
 {
   "name": "@web-ai-evals/runner",
   "version": "0.1.0",
-  "type": "module",
+  "description": "Run and compare LLM evals inside real browsers: CLI and Node orchestrator for web-ai-evals",
+  "keywords": [
+    "llm",
+    "evals",
+    "web-ai",
+    "browser",
+    "built-in-ai",
+    "prompt-api",
+    "webgpu",
+    "playwright",
+    "cli",
+    "benchmark"
+  ],
+  "homepage": "https://github.com/swissspidy/web-ai-evals/tree/main/packages/runner#readme",
+  "bugs": {
+    "url": "https://github.com/swissspidy/web-ai-evals/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swissspidy/web-ai-evals.git",
+    "directory": "packages/runner"
+  },
   "license": "Apache-2.0",
+  "author": "Pascal Birchler",
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -27,5 +50,11 @@
   },
   "bin": {
     "web-ai-evals": "./dist/cli.js"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

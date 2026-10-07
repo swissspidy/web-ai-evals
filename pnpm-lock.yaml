@@ -55,7 +55,7 @@ importers:
   packages/core: {}
 
   packages/page-runtime:
-    dependencies:
+    devDependencies:
       '@huggingface/transformers':
         specifier: ^4.3.0
         version: 4.3.0(@types/node@26.6.3)
@@ -95,6 +95,9 @@ importers:
 
   packages/scorers:
     dependencies:
+      '@huggingface/transformers':
+        specifier: ^4.3.0
+        version: 4.3.0(@types/node@26.6.3)
       '@web-ai-evals/core':
         specifier: workspace:*
         version: link:../core
@@ -7505,7 +7508,7 @@ snapshots:
       jsonwebtoken: 9.0.3
       load-esm: 1.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.20.0(debug@4.4.3))
+      retry-axios: 2.6.0(axios@1.20.0)
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -8734,7 +8737,7 @@ snapshots:
       onetime: 7.0.0
       signal-exit: 4.1.0
 
-  retry-axios@2.6.0(axios@1.20.0(debug@4.4.3)):
+  retry-axios@2.6.0(axios@1.20.0):
     dependencies:
       axios: 1.20.0(debug@4.4.3)
     optional: true

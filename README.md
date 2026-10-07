@@ -46,7 +46,23 @@ run them. See [the first report](#first-report) and
 
 ## Quick start
 
-Requires Node 24+ (for native TypeScript configs), pnpm, and Google Chrome.
+Requires Node 24+ (for native TypeScript configs) and Google Chrome.
+
+### In your own project
+
+```sh
+npm install --save-dev @web-ai-evals/runner @web-ai-evals/scorers
+npx web-ai-evals doctor --config evals.config.ts
+npx web-ai-evals run --config evals.config.ts
+```
+
+Write `evals.config.ts` as shown under [Configuration](#configuration). The
+JSONL datasets in [`suites/`](suites) are a good starting point; they aren't
+part of the npm packages, so copy the ones you want.
+
+### From this repository
+
+Includes the example suites and the showcase config. Needs pnpm.
 
 ```sh
 pnpm install
@@ -254,6 +270,9 @@ Chrome installed.
 | `@web-ai-evals/scorers` | Scorers |
 | `@web-ai-evals/report` | HTML report, run diffs, Markdown summaries |
 | `@web-ai-evals/promptfoo` | Promptfoo provider |
+
+All packages are published to npm with the same version. See
+[docs/releasing.md](docs/releasing.md).
 
 ## First report
 

@@ -1,0 +1,48 @@
+name: Release
+
+# Publishes every package to npm when a v* tag is pushed (e.g. v0.1.0).
+# Uses npm trusted publishing (OIDC), so there is no npm token in the repo.
+# Setup and the first publish are described in docs/releasing.md.
+on:
+  push:
+    tags: ['v*']
+
+permissions: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing and provenance
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      # No dependency cache: release builds must not read a cache that other workflows write.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - name: Pack
+        run: node scripts/pack.mjs
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+      # Browser tests ran in CI on main; these check the release build itself.
+      - run: pnpm typecheck
+      - run: pnpm test --exclude test/e2e.test.ts
+      - name: Publish
+        # Skips versions that are already on npm, so a failed release can be re-run.
+        run: |
+          while read -r file; do
+            name=$(tar -xzOf "packages-out/$file" package/package.json | node -p 'const p = JSON.parse(require("fs").readFileSync(0, "utf8")); `${p.name}@${p.version}`')
+            # npm view prints nothing (and exits 0) for an unpublished version of an existing package.
+            if [ -n "$(npm view "$name" version 2>/dev/null)" ]; then
+              echo "$name is already published, skipping"
+            else
+              npm publish "packages-out/$file" --provenance --access public
+            fi
+          done < packages-out/order.txt

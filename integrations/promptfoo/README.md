@@ -7,6 +7,10 @@ AI, WebLLM, or Transformers.js on WebGPU or Wasm.
 Promptfoo's own Transformers.js provider runs in Node, and its browser
 provider automates web UIs. This provider runs the actual in-browser backends.
 
+```sh
+npm install --save-dev promptfoo @web-ai-evals/promptfoo
+```
+
 ```yaml
 providers:
   - id: file://node_modules/@web-ai-evals/promptfoo/dist/provider.js

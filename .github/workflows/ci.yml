@@ -30,3 +30,6 @@ jobs:
       - name: Promptfoo provider (mock backend)
         working-directory: integrations/promptfoo
         run: npx promptfoo eval -c example/promptfooconfig.yaml --no-cache --no-write || test $? -eq 100
+      - name: Pack the npm packages
+        # Release build of every package, as .github/workflows/release.yml publishes them.
+        run: node scripts/pack.mjs

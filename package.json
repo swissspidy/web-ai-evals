@@ -11,19 +11,20 @@
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
     "test": "vitest run",
-    "wae": "node packages/runner/dist/cli.js"
+    "wae": "node packages/runner/dist/cli.js",
+    "release:pack": "node scripts/pack.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",
+    "@web-ai-evals/core": "workspace:*",
+    "@web-ai-evals/page-runtime": "workspace:*",
+    "@web-ai-evals/report": "workspace:*",
+    "@web-ai-evals/runner": "workspace:*",
+    "@web-ai-evals/scorers": "workspace:*",
     "esbuild": "^0.28.2",
     "playwright": "^1.63.0",
     "typescript": "^5.9.3",
-    "vitest": "^5.0.2",
-    "@web-ai-evals/core": "workspace:*",
-    "@web-ai-evals/runner": "workspace:*",
-    "@web-ai-evals/scorers": "workspace:*",
-    "@web-ai-evals/report": "workspace:*",
-    "@web-ai-evals/page-runtime": "workspace:*"
+    "vitest": "^5.0.2"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
