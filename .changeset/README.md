@@ -26,14 +26,14 @@ the next version from the manifest, so the `minor` in `initial-release.md` takes
 A trusted publisher can only be added to a package that already exists, so the first release is
 published by hand:
 
-1. Merge the "Version packages" pull request the workflow opens. Its publish step fails, because
-   no trusted publisher is configured yet. That is expected.
-2. Locally, on the updated `main`: `npm login`, then `pnpm install && pnpm --filter web-ai-evals
-   publish --no-provenance`. (Provenance needs a CI identity; later releases from the workflow
-   have it.) `prepack` runs the release build.
+1. Wait for the workflow to open the "Version packages" pull request (`0.0.0` → `0.1.0`).
+2. Check out that branch locally, then `npm login` and
+   `pnpm install && pnpm --filter web-ai-evals publish --no-provenance`. Provenance needs a CI
+   identity; releases from the workflow have it. `prepack` runs the release build.
 3. On npmjs.com, add the trusted publisher (repository `swissspidy/web-ai-evals`, workflow
-   `release.yml`), and under the package's settings require two-factor authentication and
-   disallow tokens.
-4. Re-run the failed release job. `changeset publish` sees `0.1.0` is already on npm, skips it,
-   and the `web-ai-evals@0.1.0` tag and GitHub release are created then. If they aren't, run
-   `git tag web-ai-evals@0.1.0 && git push origin web-ai-evals@0.1.0`.
+   `release.yml`). In the package settings, require two-factor authentication and disallow tokens.
+4. Merge the pull request. `changeset publish` finds `0.1.0` already on npm and publishes nothing,
+   so tag that release yourself: `git tag web-ai-evals@0.1.0 && git push origin web-ai-evals@0.1.0`,
+   and create a GitHub release from it with the `CHANGELOG.md` entry.
+
+From then on, merging the "Version packages" pull request is the whole release.
