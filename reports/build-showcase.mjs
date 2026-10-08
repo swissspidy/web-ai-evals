@@ -2,6 +2,7 @@
 //   node reports/build-showcase.mjs results/<run>.json [more.json] > reports/showcase/index.html
 // Emits a standalone HTML document (for GitHub Pages). --fragment omits the
 // document wrapper, for hosts that add their own (e.g. a claude.ai Artifact).
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 const args = process.argv.slice(2);
@@ -34,8 +35,8 @@ const ORDER = Object.keys(NAMES);
 const SLOT = { 'gemini-nano': 1, 'qwen2.5-0.5b-tjs-wasm': 2, 'chrome-summarizer': 3, 'chrome-summarizer-keypoints': 4, 'chrome-translator': 4, 'gemma4-builtin': 5, 'phi-4-mini': 6, 'gemma3-1b-webllm': 7, 'gemma3-1b-tjs-webgpu': 8 };
 
 const SUITES = {
-  sentiment: { title: 'Sentiment classification', metric: 'accuracy', metricLabel: 'Accuracy', blurb: (n) => `${n} short reviews and statements, three labels. About a third are hard: sarcasm, negation, litotes, mixed verdicts.` },
-  summarization: { title: 'Summarization', metric: 'rougeL', metricLabel: 'ROUGE-L F1', blurb: (n) => `${n} news-style articles (90–130 words) against a one-to-two sentence reference summary.` },
+  sentiment: { title: 'Sentiment classification', metric: 'accuracy', metricLabel: 'Accuracy', blurb: (n) => `${n} short reviews and statements, three labels. Many are hard: sarcasm, negation, litotes, mixed verdicts.` },
+  summarization: { title: 'Summarization', metric: 'rougeL', metricLabel: 'ROUGE-L F1', blurb: (n) => `${n} news-style articles of about 110 words against a one-to-two sentence reference summary.` },
   extraction: { title: 'Structured extraction', metric: 'fields', metricLabel: 'Field accuracy', blurb: (n) => `${n} restaurant booking requests to JSON with name, ISO date, city and party size.` },
   translation: { title: 'Translation EN → DE', metric: 'chrF', metricLabel: 'chrF', blurb: (n) => `${n} English sentences against a German reference translation.` },
 };
@@ -120,6 +121,9 @@ function suiteSection(id) {
   const skipped = all.filter((c) => c.load.status !== 'ok');
   if (!ran.length) return '';
   const lat = (c) => c.summary.warm?.totalMs?.p50 ?? c.summary.totalMs?.p50;
+  // Runs made before and after a suite grew can't be compared on scores; label each row with its size.
+  const mixed = new Set(ran.map((c) => c.dataset.sha256)).size > 1;
+  const size = (c) => (mixed ? `<small>${num(c.summary.total)} examples</small>` : '');
   const maxLat = Math.max(...ran.map((c) => lat(c) ?? 0));
   const bar = (v, max, fmt, slot) => {
     const w = v === undefined ? 0 : Math.max(0.5, (v / max) * 100);
@@ -129,14 +133,14 @@ function suiteSection(id) {
     .map((c) => {
       const [n, sub] = NAMES[c.backend.id] ?? [c.backend.id, ''];
       const slot = SLOT[c.backend.id] ?? 8;
-      return `<div class="crow"><div class="who"><span class="key" style="background:var(--s${slot})"></span><span><strong>${esc(n)}</strong><small>${esc(sub)}</small>${where(c)}</span></div>${bar(c.summary.scores[meta.metric], 1, (v) => v.toFixed(3), slot)}${bar(lat(c), maxLat, sec, slot)}</div>`;
+      return `<div class="crow"><div class="who"><span class="key" style="background:var(--s${slot})"></span><span><strong>${esc(n)}</strong><small>${esc(sub)}</small>${where(c)}${size(c)}</span></div>${bar(c.summary.scores[meta.metric], 1, (v) => v.toFixed(3), slot)}${bar(lat(c), maxLat, sec, slot)}</div>`;
     })
     .join('');
   const rows = ran
     .map((c) => {
       const s = c.summary;
       const extra = id === 'summarization' ? `${s.scores.words?.toFixed(0)} words` : id === 'extraction' ? `${(s.scores.jsonSchema * 100).toFixed(0)}% schema-valid` : id === 'sentiment' ? `macro-F1 ${s.aggregates['accuracy.macroF1']?.toFixed(3)}` : `${(s.scores.exact * 100).toFixed(0)}% contain the reference`;
-      return `<tr><td>${esc(NAMES[c.backend.id]?.[0] ?? c.backend.id)} <small>${esc(NAMES[c.backend.id]?.[1] ?? '')}</small>${where(c)}</td><td class="n">${s.scores[meta.metric].toFixed(3)}</td><td class="n">${esc(extra)}</td><td class="n">${sec(s.ttftMs?.p50)}</td><td class="n">${sec(lat(c))}</td><td class="n">${s.tokensPerSecond ? s.tokensPerSecond.p50.toFixed(1) : '—'}</td><td class="n">${num(s.ok)}/${num(s.total)}</td></tr>`;
+      return `<tr><td>${esc(NAMES[c.backend.id]?.[0] ?? c.backend.id)} <small>${esc(NAMES[c.backend.id]?.[1] ?? '')}</small>${where(c)}${size(c)}</td><td class="n">${s.scores[meta.metric].toFixed(3)}</td><td class="n">${esc(extra)}</td><td class="n">${sec(s.ttftMs?.p50)}</td><td class="n">${sec(lat(c))}</td><td class="n">${s.tokensPerSecond ? s.tokensPerSecond.p50.toFixed(1) : '—'}</td><td class="n">${num(s.ok)}/${num(s.total)}</td></tr>`;
     })
     .join('');
   return `<section class="suite" id="${id}">
@@ -145,6 +149,7 @@ function suiteSection(id) {
     <div class="crow chead"><div></div><div class="col-head">${esc(meta.metricLabel)} <span>higher is better, 0–1</span></div><div class="col-head">Median latency per example <span>lower is better</span></div></div>
     ${chartRows}
   </div>
+  ${mixed ? `<p class="na">These rows ran different versions of this suite (${exampleCount(ran)} examples). Compare scores only between rows with the same number of examples.</p>` : ''}
   <div class="scroll"><table><thead><tr><th>Backend</th><th class="n">${esc(meta.metricLabel)}</th><th class="n">Detail</th><th class="n">TTFT p50</th><th class="n">Latency p50</th><th class="n">Tokens/s p50</th><th class="n">OK</th></tr></thead><tbody>${rows}</tbody></table></div>
   ${runs.map((r, i) => notMeasured(r, skipped.filter((c) => c.run === i))).join('')}
 </section>`;
@@ -172,6 +177,104 @@ const s = {
   nanoTr: ok('translation', 'gemini-nano', cpuRun), qwenTr: ok('translation', 'qwen2.5-0.5b-tjs-wasm', cpuRun), tr: ok('translation', 'chrome-translator', cpuRun),
 };
 const lat = (c) => c?.summary.warm?.totalMs?.p50 ?? c?.summary.totalMs?.p50;
+
+/** Score per example id (first repeat). */
+function byId(c, m) {
+  const out = new Map();
+  for (const x of c.results) if (!out.has(x.exampleId)) out.set(x.exampleId, x.scores?.[m] ?? 0);
+  return out;
+}
+const mean = (xs) => xs.reduce((a, x) => a + x, 0) / xs.length;
+const median = (xs) => {
+  const v = [...xs].sort((a, b) => a - b);
+  return v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2;
+};
+
+/** 95% bootstrap interval of a mean difference. Seeded, so rebuilding the page doesn't change it. */
+function pairedCI(diffs, rounds = 4000) {
+  let seed = 0x2545f491;
+  const rand = () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const means = [];
+  for (let r = 0; r < rounds; r++) {
+    let sum = 0;
+    for (let i = 0; i < diffs.length; i++) sum += diffs[Math.floor(rand() * diffs.length)];
+    means.push(sum / diffs.length);
+  }
+  means.sort((a, b) => a - b);
+  return [means[Math.floor(rounds * 0.025)], means[Math.floor(rounds * 0.975)]];
+}
+
+/** Paired comparison of two cells on the examples both ran (optionally only `only`). */
+function compare(a, b, m, only) {
+  const A = byId(a, m);
+  const B = byId(b, m);
+  const ids = [...A.keys()].filter((id) => B.has(id) && (!only || only.has(id)));
+  const d = ids.map((id) => A.get(id) - B.get(id));
+  const [lo, hi] = pairedCI(d);
+  return { ids, n: ids.length, a: mean(ids.map((id) => A.get(id))), b: mean(ids.map((id) => B.get(id))), d: mean(d), lo, hi };
+}
+
+/** Ids of the examples marked hard, when the dataset file is present and unchanged since the run. */
+function hardIds(ref) {
+  try {
+    const text = readFileSync(ref.path, 'utf8');
+    if (createHash('sha256').update(text).digest('hex') !== ref.sha256) return undefined;
+    const rows = text.split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l));
+    return new Set(rows.filter((x) => x.meta?.difficulty === 'hard').map((x) => x.id));
+  } catch {
+    return undefined;
+  }
+}
+
+const signed = (v) => `${v < 0 ? '−' : '+'}${Math.abs(v).toFixed(3)}`;
+const list = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`);
+
+function g4Finding() {
+  if (!g4.length) return '';
+  const cmp = g4.map(([id, gemma, nano]) => ({ id, gemma, nano, ...compare(gemma, nano, METRIC[id]) }));
+  const worse = cmp.filter((c) => c.hi < 0);
+  const better = cmp.filter((c) => c.lo > 0);
+  const level = cmp.filter((c) => c.lo <= 0 && c.hi >= 0);
+  const head =
+    worse.length || better.length
+      ? `On the same machine, Gemma 4 ${[worse.length && `trails Gemini Nano on ${list(worse.map((c) => c.id))}`, better.length && `beats it on ${list(better.map((c) => c.id))}`].filter(Boolean).join(' and ')}${level.length ? `, and the two are level on ${list(level.map((c) => c.id))}` : ''}`
+      : 'On the same machine, Gemma 4 and Gemini Nano are level on every suite';
+  const detail = cmp.map((c) => `${FINDING_LABEL[c.id]} ${c.a.toFixed(3)} vs ${c.b.toFixed(3)} (${signed(c.d)}, 95% CI ${signed(c.lo)} to ${signed(c.hi)}, ${c.n} examples)`).join('; ');
+  // Where a gap shows, say whether the hard examples carry it.
+  const hard = [...worse, ...better]
+    .map((c) => {
+      const h = hardIds(c.gemma.dataset);
+      if (!h?.size) return '';
+      const hc = compare(c.gemma, c.nano, METRIC[c.id], h);
+      const rc = compare(c.gemma, c.nano, METRIC[c.id], new Set(c.ids.filter((id) => !h.has(id))));
+      return hc.n && rc.n ? ` The ${c.id} gap is in the hard examples: ${hc.a.toFixed(3)} vs ${hc.b.toFixed(3)} on the ${hc.n} hard ones, ${rc.a.toFixed(3)} vs ${rc.b.toFixed(3)} on the other ${rc.n}.` : '';
+    })
+    .join('');
+  const [first, g, n] = g4[0];
+  const sum = g4.find(([id]) => id === 'summarization');
+  const streams = sum && sum[1].summary.tokensPerSecond && sum[2].summary.tokensPerSecond ? `, but Gemma 4 streams faster once it starts (${sum[1].summary.tokensPerSecond.p50.toFixed(0)} vs ${sum[2].summary.tokensPerSecond.p50.toFixed(0)} tokens/s on summaries)` : '';
+  return `<li><span><strong>${head}</strong> (${esc(machineName(runs[gpuRun]))}, Chrome ${esc(cells.find((c) => c.run === gpuRun).environment.browser.version)}): ${detail}.${hard} Gemini Nano answers sooner (time to first token ${sec(n.summary.ttftMs?.p50)} vs ${sec(g.summary.ttftMs?.p50)} for Gemma 4 on ${first})${streams}. Gemma 4 needs a GPU: on the CPU-only machine, Chrome 154 downloaded it but crashed every time it created a session.</span></li>`;
+}
+
+function nanoHwFinding() {
+  if (!nanoHw.length) return '';
+  // Only the examples both runs share, so a suite that grew in between doesn't skew the comparison.
+  const rows = nanoHw.map(([id, g, c]) => {
+    const cmp = compare(g, c, METRIC[id]);
+    const ids = new Set(cmp.ids);
+    const t = (cell) => median(cell.results.filter((x) => ids.has(x.exampleId) && x.phase !== 'cold').map((x) => x.timings.totalMs));
+    return { id, cmp, g: t(g), c: t(c) };
+  });
+  const r = rows.map((x) => x.c / x.g);
+  const tr = rows.find((x) => x.id === 'translation');
+  const grew = rows.some((x) => x.cmp.n < Math.max(nanoHw.find(([id]) => id === x.id)[1].summary.total, nanoHw.find(([id]) => id === x.id)[2].summary.total));
+  return `<li><span><strong>Gemini Nano is ${Math.min(...r).toFixed(0)}–${Math.max(...r).toFixed(0)}× faster on the ${esc(machineName(runs[gpuRun]))}'s GPU than on the CPU-only machine</strong>. Median time per example${grew ? ' on the examples both runs share' : ''}: ${rows.map((x) => `${sec(x.g)} vs ${sec(x.c)} on ${x.id}`).join(', ')}.${tr ? ` Its scores differ too (translation chrF ${tr.cmp.a.toFixed(3)} vs ${tr.cmp.b.toFixed(3)} on the same ${tr.cmp.n} sentences), but Chrome ships different Nano builds for GPU and CPU and the two machines ran different Chrome versions, so the score gap isn't down to the hardware alone.` : ''}</span></li>`;
+}
 
 const html = `<title>Built-in AI vs In-Page Models</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -249,8 +352,8 @@ pre { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6p
 </div>
 
 <ol class="findings">
-  ${g4.length ? `<li><span><strong>Gemma 4 scores within ${Math.max(...g4.map(([id, a, b]) => Math.abs(a.summary.scores[METRIC[id]] - b.summary.scores[METRIC[id]]))).toFixed(2)} of Gemini Nano on every suite, on the same machine</strong> (${esc(machineName(runs[gpuRun]))}, Chrome ${esc(cells.find((c) => c.run === gpuRun).environment.browser.version)}): ${g4.map(([id, a, b]) => `${FINDING_LABEL[id]} ${f3(a, METRIC[id])} vs ${f3(b, METRIC[id])}`).join(', ')}. Gemini Nano answers sooner (time to first token ${sec(g4[0][2].summary.ttftMs?.p50)} for Nano vs ${sec(g4[0][1].summary.ttftMs?.p50)} on ${g4[0][0]})${(() => { const sum = g4.find(([id]) => id === 'summarization'); return sum && sum[1].summary.tokensPerSecond && sum[2].summary.tokensPerSecond ? `, but Gemma 4 streams faster once it starts (${sum[1].summary.tokensPerSecond.p50.toFixed(0)} vs ${sum[2].summary.tokensPerSecond.p50.toFixed(0)} tokens/s on summaries)` : ''; })()}. Gemma 4 needs a GPU: on the CPU-only machine, Chrome 154 downloaded it but crashed every time it created a session.</span></li>` : ''}
-  ${nanoHw.length ? (() => { const r = nanoHw.map(([, g, c]) => lat(c) / lat(g)); return `<li><span><strong>Gemini Nano is ${Math.min(...r).toFixed(0)}–${Math.max(...r).toFixed(0)}× faster on the ${esc(machineName(runs[gpuRun]))}'s GPU than on the CPU-only machine</strong>. Median time per example: ${nanoHw.map(([id, g, c]) => `${sec(lat(g))} vs ${sec(lat(c))} on ${id}`).join(', ')}. Its scores differ too (translation chrF ${f3(nanoHw.find(([id]) => id === 'translation')?.[1], 'chrF')} vs ${f3(nanoHw.find(([id]) => id === 'translation')?.[2], 'chrF')}), but Chrome ships different Nano builds for GPU and CPU and the two machines ran different Chrome versions, so the score gap isn't down to the hardware alone.</span></li>`; })() : ''}
+  ${g4Finding()}
+  ${nanoHwFinding()}
   ${s.nanoSent && s.qwenSent ? `<li><span><strong>On CPU, Gemini Nano matches or beats a 0.5B in-page model on every suite</strong>: sentiment accuracy ${f3(s.nanoSent, 'accuracy')} vs ${f3(s.qwenSent, 'accuracy')}, extraction field accuracy ${f3(s.nanoExt, 'fields')} vs ${f3(s.qwenExt, 'fields')}${s.nanoTr && s.qwenTr ? `, translation chrF ${f3(s.nanoTr, 'chrF')} vs ${f3(s.qwenTr, 'chrF')}` : ''}.</span></li>
   <li><span><strong>It is also faster</strong>. Median time to first token ${sec(s.nanoSent?.summary.ttftMs?.p50)} vs ${sec(s.qwenSent?.summary.ttftMs?.p50)} on sentiment; a summary takes ${sec(lat(s.nanoSum))} vs ${sec(lat(s.qwenSum))}. Chrome's native CPU inference outruns ONNX Runtime Web's Wasm backend by a wide margin.</span></li>` : ''}
   ${s.tldr && s.nanoSum ? `<li><span><strong>Chrome's Summarizer API ignores <code>format: "plain-text"</code> on this build, and misbehaves with it.</strong> In tl;dr mode it returned a Markdown news article every time (${s.tldr?.results.filter((r) => r.output?.startsWith('#')).length ?? 0} of 12), averaging ${s.tldr?.summary.scores.words.toFixed(0)} words for ~100-word inputs, with invented placeholders such as “[Region Name]”. In key-points mode, ${s.kp ? s.kp.results.filter((r) => { const l = (r.output ?? '').split('\n').filter(Boolean); return l.filter((x) => x.trim().endsWith('?')).length > l.length / 2; }).length : 0} of 12 answers were bullet lists of <em>questions about</em> the article. Key points in Markdown format, the API default, looked right in a spot check. The Prompt API with a plain instruction scores ROUGE-L ${f3(s.nanoSum, 'rougeL')} against ${f3(s.tldr, 'rougeL')} for the Summarizer.</span></li>` : ''}

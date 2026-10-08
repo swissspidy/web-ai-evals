@@ -116,15 +116,20 @@ What we saw on Chrome 154 (Linux, 4-core VM, no GPU):
   version. `web-ai-evals doctor` prints the crash count and flags this.
 
 On a GPU it works. Measured on an Apple M4 Pro (macOS, Metal, 48 GB) with
-Chrome 155.0.8059.40, same model and component versions as above:
+Chrome 155 and 156, same model and component versions as above:
 
 - `create()` succeeds and loads from the profile in about 1.4 s. Chrome reports
   performance class 5 and 0 crashes.
-- Gemma 4 scores within 0.04 of Gemini Nano on the same machine on every suite
-  (sentiment accuracy 0.900 vs 0.933, summary ROUGE-L 0.341 vs 0.337,
-  extraction 1.000 vs 1.000, translation chrF 0.887 vs 0.923).
-- Gemini Nano reaches the first token sooner (135 ms vs 877 ms on sentiment).
-  Gemma 4 streams faster once it starts (106 vs 56 tokens/s on summaries).
+- On the full suites (710 examples, Chrome 156.0.8078.12), Gemma 4 is worse
+  than Gemini Nano at sentiment: accuracy 0.867 vs 0.940, 95% CI of the
+  difference −0.107 to −0.040. The gap is in the hard examples (0.743 vs 0.879
+  on 140 items with sarcasm, negation or understatement; 0.975 vs 0.994 on the
+  rest). Gemma 4 answers in the right format; it misreads the sarcasm.
+- Summaries, extraction and translation are level: ROUGE-L 0.318 vs 0.319,
+  field accuracy 0.977 vs 0.970, chrF 0.804 vs 0.823 (every interval includes
+  zero).
+- Gemini Nano reaches the first token sooner (136 ms vs 866 ms on sentiment).
+  Gemma 4 streams faster once it starts (106 vs 55 tokens/s on summaries).
 
 The numbers are in the [first report](https://swissspidy.github.io/web-ai-evals/2026-09-29-cpu/).
 

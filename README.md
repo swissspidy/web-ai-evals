@@ -27,9 +27,9 @@ suite (JSONL) × backends × browsers  ──►  results/<runId>.json  ──�
 
 | Backend | Adapter | Verified end to end |
 |---|---|---|
-| Prompt API (Gemini Nano, Chrome) | `prompt-api` | ✅ Chrome 154 Stable, Linux, CPU backend; Chrome 155, macOS, Apple M4 Pro GPU |
+| Prompt API (Gemini Nano, Chrome) | `prompt-api` | ✅ Chrome 154 Stable, Linux, CPU backend; Chrome 155–156, macOS, Apple M4 Pro GPU |
 | Prompt API (Phi-4-mini, Edge) | `prompt-api` | ⚠️ needs Edge Dev/Canary on Windows/macOS with a GPU |
-| Prompt API (Gemma 4 2B, Chrome flag) | `prompt-api` + `gemma4` preset | ✅ Chrome 155, macOS, Apple M4 Pro GPU; crashes without a GPU ([details](docs/browser-automation.md#gemma-4-as-the-built-in-model)) |
+| Prompt API (Gemma 4 2B, Chrome flag) | `prompt-api` + `gemma4` preset | ✅ Chrome 155–156, macOS, Apple M4 Pro GPU; crashes without a GPU ([details](docs/browser-automation.md#gemma-4-as-the-built-in-model)) |
 | Summarizer / Writer / Rewriter | `summarizer`, `writer`, `rewriter` | ✅ Summarizer on Chrome 154 (see the known issue with `plain-text`); Writer and Rewriter need the `writing-apis` flag preset |
 | Translator | `translator` | ✅ Chrome 154 (fails on first use until Chrome installs the translation runtime; the runner retries — [details](docs/browser-automation.md#known-api-issues-seen-during-runs-chrome-154-stable-linux-cpu-backend)) |
 | Classifier (WebAI Studio extension polyfill) | `classifier` | ⚠️ needs the extension installed in the profile |
@@ -288,7 +288,8 @@ request that changes the package.
 (source: [`reports/2026-09-29-cpu/`](reports/2026-09-29-cpu)). It compares Gemini Nano,
 Chrome's Summarizer and Translator APIs, and Qwen2.5-0.5B on Transformers.js
 Wasm across all four suites, in Chrome 154 on a CPU-only machine. A second run
-on an Apple M4 Pro adds Gemini Nano on the GPU and Gemma 4 (Chrome 155).
+on an Apple M4 Pro adds Gemini Nano on the GPU and Gemma 4 on the full
+suites (Chrome 156).
 
 Headline results:
 - Gemini Nano matches or beats the 0.5B in-page model on every suite
@@ -297,9 +298,11 @@ Headline results:
 - Chrome's Translator API matches Gemini Nano on translation (chrF 0.854 vs
   0.860) at 20 ms per sentence instead of 1.8 s.
 - Chrome's Summarizer API misbehaves with `format: "plain-text"`.
-- On the M4 Pro, Gemma 4 scores within 0.04 of Gemini Nano on every suite.
-  Nano reaches the first token sooner (135 ms vs 877 ms on sentiment); Gemma 4
-  streams faster (106 vs 56 tokens/s on summaries).
+- On the M4 Pro, Gemma 4 is worse than Gemini Nano at sentiment (0.867 vs
+  0.940), all of it on the hard sarcasm and negation items, and level on
+  summaries, extraction and translation. Nano reaches the first token sooner
+  (136 ms vs 866 ms on sentiment); Gemma 4 streams faster (106 vs 55 tokens/s
+  on summaries).
 - Gemini Nano is 4–9× faster per example on the M4 Pro's GPU than on the
   CPU-only machine.
 

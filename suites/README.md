@@ -23,6 +23,7 @@ Hard examples carry `"meta": {"difficulty": "hard"}`:
   whose headline effect isn't significant.
 
 New examples are appended, so ids stay stable. A run with `limit: N` uses the
-first N examples, which are the original, easier ones. Leave `limit` off to
-compare models: with a few dozen examples, differences of a few points are
-noise.
+first N examples. The original suites were the first 60 (sentiment), 20
+(extraction), 20 (translation) and 12 (summarization); those limits reproduce
+them. Leave `limit` off to compare models: with a few dozen examples,
+differences of a few points are noise.
