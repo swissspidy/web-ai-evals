@@ -6,14 +6,14 @@ every push to `main` that touches it.
 
 | Report | Machine | Backends |
 |---|---|---|
-| [2026-09-29-cpu](2026-09-29-cpu/index.html) ([full generated report](2026-09-29-cpu/full-report.html), run files: [CPU](2026-09-29-cpu/run.json), [M4 Pro](2026-09-29-cpu/run-m4pro.json)) | Linux VM, 4-core Xeon, 16 GB, **no GPU**, Chrome 154 | Gemini Nano (CPU), Summarizer API, Translator API, Qwen2.5-0.5B on Transformers.js Wasm |
-| | Apple M4 Pro, 48 GB, Metal GPU, Chrome 155 (2026-10-08) | Gemini Nano (GPU), Gemma 4 2B (`gemma4` preset) |
+| [2026-09-29-cpu](2026-09-29-cpu/index.html) ([full generated report](2026-09-29-cpu/full-report.html), run files: [CPU](2026-09-29-cpu/run.json), [M4 Pro](2026-09-29-cpu/run-m4pro-full.json)) | Linux VM, 4-core Xeon, 16 GB, **no GPU**, Chrome 154 | Gemini Nano (CPU), Summarizer API, Translator API, Qwen2.5-0.5B on Transformers.js Wasm |
+| | Apple M4 Pro, 48 GB, Metal GPU, Chrome 156 (2026-10-08), full suites | Gemini Nano (GPU), Gemma 4 2B (`gemma4` preset) |
 
 `index.html` and `full-report.html` are built from the run files:
 
 ```sh
-node reports/build-showcase.mjs reports/2026-09-29-cpu/run.json reports/2026-09-29-cpu/run-m4pro.json > reports/2026-09-29-cpu/index.html
-pnpm wae report reports/2026-09-29-cpu/run.json reports/2026-09-29-cpu/run-m4pro.json --out reports/2026-09-29-cpu/full-report.html
+node reports/build-showcase.mjs reports/2026-09-29-cpu/run.json reports/2026-09-29-cpu/run-m4pro-full.json > reports/2026-09-29-cpu/index.html
+pnpm wae report reports/2026-09-29-cpu/run.json reports/2026-09-29-cpu/run-m4pro-full.json --out reports/2026-09-29-cpu/full-report.html
 ```
 
 `results/` is gitignored, so copy a run file next to the report before
