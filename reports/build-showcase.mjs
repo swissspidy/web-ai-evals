@@ -11,7 +11,9 @@ const wrap = (html) =>
   fragment
     ? html
     : `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n${html.replace(/<main\b/, '</head>\n<body>\n<main')}\n</body>\n</html>\n`;
-const cells = runs.flatMap((r) => r.cells);
+// Each cell remembers its run, so rows from different machines stay apart.
+const cells = runs.flatMap((r, i) => r.cells.map((c) => ({ ...c, run: i })));
+const multi = runs.length > 1;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const sec = (ms) => (ms === undefined ? '—' : ms >= 10000 ? `${(ms / 1000).toFixed(0)} s` : ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms)} ms`);
 
@@ -43,21 +45,37 @@ const num = (v) => (Number.isFinite(Number(v)) ? String(Number(v)) : '?');
 const GPU_BACKENDS = ['phi-4-mini', 'gemma4-builtin', 'gemma3-1b-webllm', 'gemma3-1b-tjs-webgpu'];
 const gpuMeasured = cells.some((c) => GPU_BACKENDS.includes(c.backend.id) && c.load.status === 'ok' && c.summary.ok > 0);
 
+/** Short machine name for row labels, e.g. "Apple M4 Pro" or "4-core Intel Xeon". */
+function machineName(r) {
+  const cpu = (r.cells[0]?.environment.hardware.cpuModel ?? r.host.cpuModel ?? '?')
+    .replace(/\((R|TM)\)/g, '')
+    .replace(/\s*(CPU|Processor)\b.*$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return hasGpu(r) ? cpu : `${num(r.host.cores)}-core ${cpu}`;
+}
+const hasGpu = (r) => r.cells.some((c) => c.environment.gpu);
+const tag = (r) => `${machineName(r)} · ${hasGpu(r) ? 'GPU' : 'no GPU'}`;
+
 /** One line per machine, from any cell of that run (loaded or not). */
 function machineLine(r) {
   const cell = r.cells.find((c) => c.load.status === 'ok') ?? r.cells[0];
   if (!cell) return '';
   const e = cell.environment;
   const gpu = r.cells.map((c) => c.environment.gpu).find(Boolean);
-  const nano = r.cells.find((c) => c.backend.kind === 'prompt-api' && c.load.status === 'ok')?.environment.backend;
-  const comps = nano?.details?.builtInComponents ?? {};
+  // Every built-in model that ran on this machine (Gemini Nano, Gemma 4, …) with its version.
+  const models = [...new Map(r.cells.filter((c) => c.backend.kind === 'prompt-api' && c.load.status === 'ok').map((c) => [c.backend.id, c.environment.backend])).values()];
   const parts = [
+    ...(multi ? [`<strong>${esc(tag(r))}</strong>`] : []),
     `${esc(e.browser.name)} ${esc(e.browser.version)} (${esc(e.browser.channel ?? '')}, ${e.browser.headless ? 'headless' : 'headful'})`,
     `${esc(e.os.platform)} ${esc(e.os.arch)}`,
     `${esc(e.hardware.cpuModel ?? r.host.cpuModel ?? '')} · ${num(e.hardware.cores)} cores · ${num(Math.round((e.hardware.memoryBytes ?? r.host.memoryBytes) / 2 ** 30))} GiB`,
     gpu ? `GPU ${esc([gpu.vendor, gpu.architecture, gpu.description].filter(Boolean).join(' '))}` : 'no GPU, no WebGPU adapter',
   ];
-  if (nano) parts.push(`${esc(nano.model ?? 'built-in model')} ${esc(comps.baseModelVersion ?? nano.modelVersion ?? '')}${comps.onDeviceModel ? ` · asset ${esc(comps.onDeviceModel)}` : ''}`);
+  for (const m of models) {
+    const comps = m.details?.builtInComponents ?? {};
+    parts.push(`${esc(m.model ?? 'built-in model')} ${esc(comps.baseModelVersion ?? m.modelVersion ?? '')}${comps.onDeviceModel ? ` · asset ${esc(comps.onDeviceModel)}` : ''}`);
+  }
   return `<div class="machine">${parts.map((p) => `<span>${p}</span>`).join('')}</div>`;
 }
 
@@ -76,9 +94,19 @@ function bars(rows, value, max, fmt, cls) {
     .join('');
 }
 
+/** Machine label under a row's name, only when the report merges several machines. */
+const where = (c) => (multi ? `<small>${esc(tag(runs[c.run]))}</small>` : '');
+
+function notMeasured(r, skipped) {
+  if (!skipped.length) return '';
+  const names = skipped.map((c) => `${esc((NAMES[c.backend.id] ?? [c.backend.id])[0])} (${esc((NAMES[c.backend.id] ?? ['', ''])[1])})`).join(', ');
+  const reason = hasGpu(r) ? [...new Set(skipped.map((c) => c.load.error ?? c.load.status))].map((e) => esc(String(e).slice(0, 120))).join('; ') : 'No WebGPU adapter';
+  return `<p class="na">Not measured on ${multi ? `the ${esc(machineName(r))}` : 'this machine'}: ${names}. ${reason}.</p>`;
+}
+
 function suiteSection(id) {
   const meta = SUITES[id];
-  const all = cells.filter((c) => c.dataset.id === id).sort((a, b) => ORDER.indexOf(a.backend.id) - ORDER.indexOf(b.backend.id));
+  const all = cells.filter((c) => c.dataset.id === id).sort((a, b) => ORDER.indexOf(a.backend.id) - ORDER.indexOf(b.backend.id) || a.run - b.run);
   const ran = all.filter((c) => c.load.status === 'ok');
   const skipped = all.filter((c) => c.load.status !== 'ok');
   if (!ran.length) return '';
@@ -92,14 +120,14 @@ function suiteSection(id) {
     .map((c) => {
       const [n, sub] = NAMES[c.backend.id] ?? [c.backend.id, ''];
       const slot = SLOT[c.backend.id] ?? 8;
-      return `<div class="crow"><div class="who"><span class="key" style="background:var(--s${slot})"></span><span><strong>${esc(n)}</strong><small>${esc(sub)}</small></span></div>${bar(c.summary.scores[meta.metric], 1, (v) => v.toFixed(3), slot)}${bar(lat(c), maxLat, sec, slot)}</div>`;
+      return `<div class="crow"><div class="who"><span class="key" style="background:var(--s${slot})"></span><span><strong>${esc(n)}</strong><small>${esc(sub)}</small>${where(c)}</span></div>${bar(c.summary.scores[meta.metric], 1, (v) => v.toFixed(3), slot)}${bar(lat(c), maxLat, sec, slot)}</div>`;
     })
     .join('');
   const rows = ran
     .map((c) => {
       const s = c.summary;
       const extra = id === 'summarization' ? `${s.scores.words?.toFixed(0)} words` : id === 'extraction' ? `${(s.scores.jsonSchema * 100).toFixed(0)}% schema-valid` : id === 'sentiment' ? `macro-F1 ${s.aggregates['accuracy.macroF1']?.toFixed(3)}` : `${(s.scores.exact * 100).toFixed(0)}% contain the reference`;
-      return `<tr><td>${esc(NAMES[c.backend.id]?.[0] ?? c.backend.id)} <small>${esc(NAMES[c.backend.id]?.[1] ?? '')}</small></td><td class="n">${s.scores[meta.metric].toFixed(3)}</td><td class="n">${esc(extra)}</td><td class="n">${sec(s.ttftMs?.p50)}</td><td class="n">${sec(lat(c))}</td><td class="n">${s.tokensPerSecond ? s.tokensPerSecond.p50.toFixed(1) : '—'}</td><td class="n">${num(s.ok)}/${num(s.total)}</td></tr>`;
+      return `<tr><td>${esc(NAMES[c.backend.id]?.[0] ?? c.backend.id)} <small>${esc(NAMES[c.backend.id]?.[1] ?? '')}</small>${where(c)}</td><td class="n">${s.scores[meta.metric].toFixed(3)}</td><td class="n">${esc(extra)}</td><td class="n">${sec(s.ttftMs?.p50)}</td><td class="n">${sec(lat(c))}</td><td class="n">${s.tokensPerSecond ? s.tokensPerSecond.p50.toFixed(1) : '—'}</td><td class="n">${num(s.ok)}/${num(s.total)}</td></tr>`;
     })
     .join('');
   return `<section class="suite" id="${id}">
@@ -109,18 +137,29 @@ function suiteSection(id) {
     ${chartRows}
   </div>
   <div class="scroll"><table><thead><tr><th>Backend</th><th class="n">${esc(meta.metricLabel)}</th><th class="n">Detail</th><th class="n">TTFT p50</th><th class="n">Latency p50</th><th class="n">Tokens/s p50</th><th class="n">OK</th></tr></thead><tbody>${rows}</tbody></table></div>
-  ${skipped.length ? `<p class="na">Not measured on this machine: ${skipped.map((c) => `${esc((NAMES[c.backend.id] ?? [c.backend.id])[0])} (${esc((NAMES[c.backend.id] ?? ['', ''])[1])})`).join(', ')}. No WebGPU adapter.</p>` : ''}
+  ${runs.map((r, i) => notMeasured(r, skipped.filter((c) => c.run === i))).join('')}
 </section>`;
 }
 
-const ok = (id, b) => cells.find((c) => c.dataset.id === id && c.backend.id === b && c.load.status === 'ok');
+// `run` picks the machine; the CPU findings compare backends from the same run.
+const ok = (id, b, run) => cells.find((c) => c.dataset.id === id && c.backend.id === b && c.load.status === 'ok' && (run === undefined || c.run === run));
 const f3 = (c, m) => c?.summary.scores[m]?.toFixed(3) ?? '—';
+const runWith = (pred) => runs.findIndex((r, i) => cells.some((c) => c.run === i && c.load.status === 'ok' && pred(c, r)));
+const cpuRun = Math.max(0, runWith((c, r) => !hasGpu(r) && c.backend.id === 'gemini-nano'));
+const gpuRun = runWith((c, r) => hasGpu(r) && c.backend.id === 'gemini-nano');
+const SUITE_IDS = ['sentiment', 'summarization', 'extraction', 'translation'];
+const METRIC = Object.fromEntries(SUITE_IDS.map((id) => [id, SUITES[id].metric]));
+const FINDING_LABEL = { sentiment: 'sentiment accuracy', summarization: 'summary ROUGE-L', extraction: 'extraction field accuracy', translation: 'translation chrF' };
+// Gemma 4 vs Gemini Nano on the same GPU machine.
+const g4 = gpuRun < 0 ? [] : SUITE_IDS.map((id) => [id, ok(id, 'gemma4-builtin', gpuRun), ok(id, 'gemini-nano', gpuRun)]).filter(([, a, b]) => a && b);
+// Gemini Nano on the GPU machine vs the CPU machine.
+const nanoHw = gpuRun < 0 || gpuRun === cpuRun ? [] : SUITE_IDS.map((id) => [id, ok(id, 'gemini-nano', gpuRun), ok(id, 'gemini-nano', cpuRun)]).filter(([, a, b]) => a && b);
 const s = {
-  nanoSent: ok('sentiment', 'gemini-nano'), qwenSent: ok('sentiment', 'qwen2.5-0.5b-tjs-wasm'),
-  nanoSum: ok('summarization', 'gemini-nano'), qwenSum: ok('summarization', 'qwen2.5-0.5b-tjs-wasm'),
-  tldr: ok('summarization', 'chrome-summarizer'), kp: ok('summarization', 'chrome-summarizer-keypoints'),
-  nanoExt: ok('extraction', 'gemini-nano'), qwenExt: ok('extraction', 'qwen2.5-0.5b-tjs-wasm'),
-  nanoTr: ok('translation', 'gemini-nano'), qwenTr: ok('translation', 'qwen2.5-0.5b-tjs-wasm'), tr: ok('translation', 'chrome-translator'),
+  nanoSent: ok('sentiment', 'gemini-nano', cpuRun), qwenSent: ok('sentiment', 'qwen2.5-0.5b-tjs-wasm', cpuRun),
+  nanoSum: ok('summarization', 'gemini-nano', cpuRun), qwenSum: ok('summarization', 'qwen2.5-0.5b-tjs-wasm', cpuRun),
+  tldr: ok('summarization', 'chrome-summarizer', cpuRun), kp: ok('summarization', 'chrome-summarizer-keypoints', cpuRun),
+  nanoExt: ok('extraction', 'gemini-nano', cpuRun), qwenExt: ok('extraction', 'qwen2.5-0.5b-tjs-wasm', cpuRun),
+  nanoTr: ok('translation', 'gemini-nano', cpuRun), qwenTr: ok('translation', 'qwen2.5-0.5b-tjs-wasm', cpuRun), tr: ok('translation', 'chrome-translator', cpuRun),
 };
 const lat = (c) => c?.summary.warm?.totalMs?.p50 ?? c?.summary.totalMs?.p50;
 
@@ -193,15 +232,17 @@ pre { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6p
 </style>
 <main>
 <div class="intro">
-  <span class="eyebrow">web-ai-evals · first report · ${esc(run.startedAt.slice(0, 10))}</span>
+  <span class="eyebrow">web-ai-evals · first report · ${esc(run.startedAt.slice(0, 10))}${multi ? ` · updated ${esc(runs.at(-1).startedAt.slice(0, 10))}` : ''}</span>
   <h1>Built-in AI vs in-page models, same prompts, same browser</h1>
-  <p>Four task suites run through Chrome's built-in Gemini Nano, Chrome's Summarizer and Translator APIs, and a Transformers.js model, all inside a real Chrome tab driven by Playwright. Every number below comes from ${runs.length === 1 ? 'one run' : `${runs.length} runs`} on the machine${runs.length === 1 ? '' : 's'} listed here.${gpuMeasured ? '' : ' The GPU backends from the comparison plan (Phi-4-mini in Edge, Gemma 3 via WebLLM and Transformers.js WebGPU) could not run there and are listed as not measured.'}</p>
+  <p>Four task suites run through Chrome's built-in Gemini Nano${g4.length ? ' and Gemma 4 (behind a Chrome flag)' : ''}, Chrome's Summarizer and Translator APIs, and a Transformers.js model, all inside a real Chrome tab driven by Playwright. Every number below comes from ${runs.length === 1 ? 'one run' : `${runs.length} runs`} on the machine${runs.length === 1 ? '' : 's'} listed here.${gpuMeasured ? '' : ' The GPU backends from the comparison plan (Phi-4-mini in Edge, Gemma 3 via WebLLM and Transformers.js WebGPU) could not run there and are listed as not measured.'}</p>
   ${runs.map(machineLine).join('\n  ')}
 </div>
 
 <ol class="findings">
-  <li><span><strong>Gemini Nano matches or beats a 0.5B in-page model on every suite</strong>: sentiment accuracy ${f3(s.nanoSent, 'accuracy')} vs ${f3(s.qwenSent, 'accuracy')}, extraction field accuracy ${f3(s.nanoExt, 'fields')} vs ${f3(s.qwenExt, 'fields')}${s.nanoTr && s.qwenTr ? `, translation chrF ${f3(s.nanoTr, 'chrF')} vs ${f3(s.qwenTr, 'chrF')}` : ''}.</span></li>
-  <li><span><strong>It is also faster on CPU</strong>. Median time to first token ${sec(s.nanoSent?.summary.ttftMs?.p50)} vs ${sec(s.qwenSent?.summary.ttftMs?.p50)} on sentiment; a summary takes ${sec(lat(s.nanoSum))} vs ${sec(lat(s.qwenSum))}. Chrome's native CPU inference outruns ONNX Runtime Web's Wasm backend by a wide margin.</span></li>
+  ${g4.length ? `<li><span><strong>Gemma 4 scores within ${Math.max(...g4.map(([id, a, b]) => Math.abs(a.summary.scores[METRIC[id]] - b.summary.scores[METRIC[id]]))).toFixed(2)} of Gemini Nano on every suite, on the same machine</strong> (${esc(machineName(runs[gpuRun]))}, Chrome ${esc(cells.find((c) => c.run === gpuRun).environment.browser.version)}): ${g4.map(([id, a, b]) => `${FINDING_LABEL[id]} ${f3(a, METRIC[id])} vs ${f3(b, METRIC[id])}`).join(', ')}. Gemini Nano answers sooner (time to first token ${sec(g4[0][2].summary.ttftMs?.p50)} for Nano vs ${sec(g4[0][1].summary.ttftMs?.p50)} on ${g4[0][0]})${(() => { const sum = g4.find(([id]) => id === 'summarization'); return sum && sum[1].summary.tokensPerSecond && sum[2].summary.tokensPerSecond ? `, but Gemma 4 streams faster once it starts (${sum[1].summary.tokensPerSecond.p50.toFixed(0)} vs ${sum[2].summary.tokensPerSecond.p50.toFixed(0)} tokens/s on summaries)` : ''; })()}. Gemma 4 needs a GPU: on the CPU-only machine, Chrome 154 downloaded it but crashed every time it created a session.</span></li>` : ''}
+  ${nanoHw.length ? (() => { const r = nanoHw.map(([, g, c]) => lat(c) / lat(g)); return `<li><span><strong>Gemini Nano is ${Math.min(...r).toFixed(0)}–${Math.max(...r).toFixed(0)}× faster on the ${esc(machineName(runs[gpuRun]))}'s GPU than on the CPU-only machine</strong>. Median time per example: ${nanoHw.map(([id, g, c]) => `${sec(lat(g))} vs ${sec(lat(c))} on ${id}`).join(', ')}. Its scores differ too (translation chrF ${f3(nanoHw.find(([id]) => id === 'translation')?.[1], 'chrF')} vs ${f3(nanoHw.find(([id]) => id === 'translation')?.[2], 'chrF')}), but Chrome ships different Nano builds for GPU and CPU and the two machines ran different Chrome versions, so the score gap isn't down to the hardware alone.</span></li>`; })() : ''}
+  <li><span><strong>On CPU, Gemini Nano matches or beats a 0.5B in-page model on every suite</strong>: sentiment accuracy ${f3(s.nanoSent, 'accuracy')} vs ${f3(s.qwenSent, 'accuracy')}, extraction field accuracy ${f3(s.nanoExt, 'fields')} vs ${f3(s.qwenExt, 'fields')}${s.nanoTr && s.qwenTr ? `, translation chrF ${f3(s.nanoTr, 'chrF')} vs ${f3(s.qwenTr, 'chrF')}` : ''}.</span></li>
+  <li><span><strong>It is also faster</strong>. Median time to first token ${sec(s.nanoSent?.summary.ttftMs?.p50)} vs ${sec(s.qwenSent?.summary.ttftMs?.p50)} on sentiment; a summary takes ${sec(lat(s.nanoSum))} vs ${sec(lat(s.qwenSum))}. Chrome's native CPU inference outruns ONNX Runtime Web's Wasm backend by a wide margin.</span></li>
   <li><span><strong>Chrome's Summarizer API ignores <code>format: "plain-text"</code> on this build, and misbehaves with it.</strong> In tl;dr mode it returned a Markdown news article every time (${s.tldr?.results.filter((r) => r.output?.startsWith('#')).length ?? 0} of 12), averaging ${s.tldr?.summary.scores.words.toFixed(0)} words for ~100-word inputs, with invented placeholders such as “[Region Name]”. In key-points mode, ${s.kp ? s.kp.results.filter((r) => { const l = (r.output ?? '').split('\n').filter(Boolean); return l.filter((x) => x.trim().endsWith('?')).length > l.length / 2; }).length : 0} of 12 answers were bullet lists of <em>questions about</em> the article. Key points in Markdown format, the API default, looked right in a spot check. The Prompt API with a plain instruction scores ROUGE-L ${f3(s.nanoSum, 'rougeL')} against ${f3(s.tldr, 'rougeL')} for the Summarizer.</span></li>
   ${s.tr ? `<li><span><strong>Chrome's Translator API matches Gemini Nano on translation at a fraction of the latency</strong>: chrF ${f3(s.tr, 'chrF')} vs ${f3(s.nanoTr, 'chrF')}, with the exact reference phrasing in ${Math.round(s.tr.summary.scores.exact * 100)}% vs ${Math.round(s.nanoTr.summary.scores.exact * 100)}% of sentences, at ${sec(lat(s.tr))} vs ${sec(lat(s.nanoTr))} per sentence. On first use it fails until Chrome has installed its translation runtime and language pack, with errors that don't say so; the runner retries until the install finishes.</span></li>` : ''}
   <li><span><strong>Gemma 3's q4 ONNX builds don't run on Transformers.js Wasm</strong> (ONNX Runtime Web lacks <code>GatherBlockQuantized</code> on Wasm), and WebLLM on a software WebGPU adapter loses the device. Browser AI on machines without a GPU is, in practice, built-in AI or a small model on Wasm.</span></li>
@@ -222,7 +263,7 @@ ${['sentiment', 'summarization', 'extraction', 'translation'].map(suiteSection).
   <div>
     <h2>What is missing</h2>
     ${s.tr ? '' : `<p>Chrome's Translator API could not create an en→de translator in this run, so it has no score here.</p>`}
-    <p>Phi-4-mini needs Edge Dev or Canary on Windows or macOS with a GPU. Gemma 3 via WebLLM and Transformers.js WebGPU need a WebGPU adapter with <code>shader-f16</code>. The same config measures them on a GPU machine, and the report tool merges runs from several machines:</p>
+    <p>Phi-4-mini needs Edge Dev or Canary on Windows or macOS with a GPU. Gemma 3 via WebLLM and Transformers.js WebGPU need a WebGPU adapter with <code>shader-f16</code>.${gpuRun >= 0 ? ` The ${esc(machineName(runs[gpuRun]))} run covered only the built-in models.` : ''} The same config measures them on a GPU machine, and the report tool merges runs from several machines:</p>
     <pre>pnpm wae run --config showcase.config.ts
 pnpm wae report results/cpu.json results/gpu.json</pre>
   </div>
