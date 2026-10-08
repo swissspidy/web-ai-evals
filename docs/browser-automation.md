@@ -115,7 +115,18 @@ What we saw on Chrome 154 (Linux, 4-core VM, no GPU):
 - **Chrome stops retrying.** After three crashes Chrome refuses to load the
   version. `web-ai-evals doctor` prints the crash count and flags this.
 
-On a machine with a GPU, this is the path to test next.
+On a GPU it works. Measured on an Apple M4 Pro (macOS, Metal, 48 GB) with
+Chrome 155.0.8059.40, same model and component versions as above:
+
+- `create()` succeeds and loads from the profile in about 1.4 s. Chrome reports
+  performance class 5 and 0 crashes.
+- Gemma 4 scores within 0.04 of Gemini Nano on the same machine on every suite
+  (sentiment accuracy 0.900 vs 0.933, summary ROUGE-L 0.341 vs 0.337,
+  extraction 1.000 vs 1.000, translation chrF 0.887 vs 0.923).
+- Gemini Nano reaches the first token sooner (135 ms vs 877 ms on sentiment).
+  Gemma 4 streams faster once it starts (106 vs 56 tokens/s on summaries).
+
+The numbers are in the [first report](https://swissspidy.github.io/web-ai-evals/2026-09-29-cpu/).
 
 ## Headless
 
