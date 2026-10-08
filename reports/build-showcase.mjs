@@ -34,10 +34,10 @@ const ORDER = Object.keys(NAMES);
 const SLOT = { 'gemini-nano': 1, 'qwen2.5-0.5b-tjs-wasm': 2, 'chrome-summarizer': 3, 'chrome-summarizer-keypoints': 4, 'chrome-translator': 4, 'gemma4-builtin': 5, 'phi-4-mini': 6, 'gemma3-1b-webllm': 7, 'gemma3-1b-tjs-webgpu': 8 };
 
 const SUITES = {
-  sentiment: { title: 'Sentiment classification', metric: 'accuracy', metricLabel: 'Accuracy', blurb: '60 short reviews and statements, three labels. 20 of them are hard: sarcasm, negation, litotes, mixed verdicts.' },
-  summarization: { title: 'Summarization', metric: 'rougeL', metricLabel: 'ROUGE-L F1', blurb: '12 news-style articles (90–120 words) against a one-to-two sentence reference summary.' },
-  extraction: { title: 'Structured extraction', metric: 'fields', metricLabel: 'Field accuracy', blurb: '20 restaurant booking requests to JSON with name, ISO date, city and party size.' },
-  translation: { title: 'Translation EN → DE', metric: 'chrF', metricLabel: 'chrF', blurb: '20 everyday English sentences against a German reference translation.' },
+  sentiment: { title: 'Sentiment classification', metric: 'accuracy', metricLabel: 'Accuracy', blurb: (n) => `${n} short reviews and statements, three labels. About a third are hard: sarcasm, negation, litotes, mixed verdicts.` },
+  summarization: { title: 'Summarization', metric: 'rougeL', metricLabel: 'ROUGE-L F1', blurb: (n) => `${n} news-style articles (90–130 words) against a one-to-two sentence reference summary.` },
+  extraction: { title: 'Structured extraction', metric: 'fields', metricLabel: 'Field accuracy', blurb: (n) => `${n} restaurant booking requests to JSON with name, ISO date, city and party size.` },
+  translation: { title: 'Translation EN → DE', metric: 'chrF', metricLabel: 'chrF', blurb: (n) => `${n} English sentences against a German reference translation.` },
 };
 
 const run = runs[0];
@@ -107,6 +107,12 @@ function notMeasured(r, skipped) {
   return `<p class="na">Not measured on ${multi ? `the ${esc(machineName(r))}` : 'this machine'}: ${[...groups].map(([why, cs]) => `${cs.map(label).join(', ')}. ${esc(why.replace(/\.$/, ''))}.`).join(' ')}</p>`;
 }
 
+/** Examples per cell as they ran; runs made with different dataset versions show a range. */
+function exampleCount(ran) {
+  const ns = [...new Set(ran.map((c) => c.summary.total))].sort((a, b) => a - b);
+  return ns.length > 1 ? `${ns[0]}–${ns.at(-1)}` : String(ns[0]);
+}
+
 function suiteSection(id) {
   const meta = SUITES[id];
   const all = cells.filter((c) => c.dataset.id === id).sort((a, b) => ORDER.indexOf(a.backend.id) - ORDER.indexOf(b.backend.id) || a.run - b.run);
@@ -134,7 +140,7 @@ function suiteSection(id) {
     })
     .join('');
   return `<section class="suite" id="${id}">
-  <header><h2>${esc(meta.title)}</h2><p>${esc(meta.blurb)}</p></header>
+  <header><h2>${esc(meta.title)}</h2><p>${esc(meta.blurb(exampleCount(ran)))}</p></header>
   <div class="chart">
     <div class="crow chead"><div></div><div class="col-head">${esc(meta.metricLabel)} <span>higher is better, 0–1</span></div><div class="col-head">Median latency per example <span>lower is better</span></div></div>
     ${chartRows}
