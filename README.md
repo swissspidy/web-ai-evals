@@ -38,8 +38,9 @@ suite (JSONL) × backends × browsers  ──►  results/<runId>.json  ──�
 | Transformers.js Wasm | `transformers` + `device: wasm` | ✅ Chrome 154 (Qwen2.5-0.5B q4) |
 | Mock (deterministic, for tests) | `mock` | ✅ CI |
 
-"✅" means a full run in this repository's development environment: a 4-core
-Linux VM with 16 GB RAM and **no GPU**. GPU backends are implemented against
+"✅" means a full run on the browser and machine named in the row: the
+repository's development environment, a 4-core Linux VM with 16 GB RAM and
+**no GPU**, or an Apple M4 Pro (Metal GPU) for the GPU results. GPU backends are implemented against
 the current APIs and report "unavailable" with a reason when the device can't
 run them. See [the first report](#first-report) and
 [docs/browser-automation.md](docs/browser-automation.md).
