@@ -214,6 +214,8 @@ function compare(a, b, m, only) {
   const A = byId(a, m);
   const B = byId(b, m);
   const ids = [...A.keys()].filter((id) => B.has(id) && (!only || only.has(id)));
+  // Cells with no examples in common can't be compared; callers skip them.
+  if (!ids.length) return { ids, n: 0, a: NaN, b: NaN, d: NaN, lo: NaN, hi: NaN };
   const d = ids.map((id) => A.get(id) - B.get(id));
   const [lo, hi] = pairedCI(d);
   return { ids, n: ids.length, a: mean(ids.map((id) => A.get(id))), b: mean(ids.map((id) => B.get(id))), d: mean(d), lo, hi };
@@ -236,7 +238,8 @@ const list = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', '
 
 function g4Finding() {
   if (!g4.length) return '';
-  const cmp = g4.map(([id, gemma, nano]) => ({ id, gemma, nano, ...compare(gemma, nano, METRIC[id]) }));
+  const cmp = g4.map(([id, gemma, nano]) => ({ id, gemma, nano, ...compare(gemma, nano, METRIC[id]) })).filter((c) => c.n);
+  if (!cmp.length) return '';
   const worse = cmp.filter((c) => c.hi < 0);
   const better = cmp.filter((c) => c.lo > 0);
   const level = cmp.filter((c) => c.lo <= 0 && c.hi >= 0);
@@ -255,10 +258,10 @@ function g4Finding() {
       return hc.n && rc.n ? ` The ${c.id} gap is in the hard examples: ${hc.a.toFixed(3)} vs ${hc.b.toFixed(3)} on the ${hc.n} hard ones, ${rc.a.toFixed(3)} vs ${rc.b.toFixed(3)} on the other ${rc.n}.` : '';
     })
     .join('');
-  const [first, g, n] = g4[0];
+  const { id: first, gemma: g, nano: n } = cmp[0];
   const sum = g4.find(([id]) => id === 'summarization');
   const streams = sum && sum[1].summary.tokensPerSecond && sum[2].summary.tokensPerSecond ? `, but Gemma 4 streams faster once it starts (${sum[1].summary.tokensPerSecond.p50.toFixed(0)} vs ${sum[2].summary.tokensPerSecond.p50.toFixed(0)} tokens/s on summaries)` : '';
-  return `<li><span><strong>${head}</strong> (${esc(machineName(runs[gpuRun]))}, Chrome ${esc(cells.find((c) => c.run === gpuRun).environment.browser.version)}): ${detail}.${hard} Gemini Nano answers sooner (time to first token ${sec(n.summary.ttftMs?.p50)} vs ${sec(g.summary.ttftMs?.p50)} for Gemma 4 on ${first})${streams}. Gemma 4 needs a GPU: on the CPU-only machine, Chrome 154 downloaded it but crashed every time it created a session.</span></li>`;
+  return `<li><span><strong>${head}</strong> (${esc(machineName(runs[gpuRun]))}, Chrome ${esc(cells.find((c) => c.run === gpuRun).environment.browser.version)}): ${detail}.${hard} Gemini Nano answers sooner (time to first token ${sec(n.summary.ttftMs?.p50)} vs ${sec(g.summary.ttftMs?.p50)} for Gemma 4 on ${first})${streams}.${cpuRun >= 0 ? ' Gemma 4 needs a GPU: on the CPU-only machine, Chrome 154 downloaded it but crashed every time it created a session.' : ''}</span></li>`;
 }
 
 function nanoHwFinding() {
@@ -269,7 +272,8 @@ function nanoHwFinding() {
     const ids = new Set(cmp.ids);
     const t = (cell) => median(cell.results.filter((x) => ids.has(x.exampleId) && x.phase !== 'cold').map((x) => x.timings.totalMs));
     return { id, cmp, g: t(g), c: t(c) };
-  });
+  }).filter((x) => x.cmp.n);
+  if (!rows.length) return '';
   const r = rows.map((x) => x.c / x.g);
   const tr = rows.find((x) => x.id === 'translation');
   const grew = rows.some((x) => x.cmp.n < Math.max(nanoHw.find(([id]) => id === x.id)[1].summary.total, nanoHw.find(([id]) => id === x.id)[2].summary.total));
