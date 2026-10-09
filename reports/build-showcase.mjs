@@ -127,7 +127,9 @@ function suiteSection(id) {
   const meta = SUITES[id];
   const all = cells.filter((c) => c.dataset.id === id).sort((a, b) => ORDER.indexOf(a.backend.id) - ORDER.indexOf(b.backend.id) || a.run - b.run);
   const ran = all.filter((c) => c.load.status === 'ok');
-  const skipped = all.filter((c) => c.load.status !== 'ok');
+  // A backend that failed in one run but was measured in another on the same machine was measured there.
+  const measured = new Set(ran.map((c) => `${c.backend.id}|${machineKey(runs[c.run])}`));
+  const skipped = all.filter((c) => c.load.status !== 'ok' && !measured.has(`${c.backend.id}|${machineKey(runs[c.run])}`));
   if (!ran.length) return '';
   const lat = (c) => c.summary.warm?.totalMs?.p50 ?? c.summary.totalMs?.p50;
   // Runs made before and after a suite grew can't be compared on scores; label each row with its size.
