@@ -173,6 +173,19 @@ stay separate in reports and diffs.
   - `availability()` keeps returning `downloadable` even after both
     components are installed and translation works.
 
+## WebLLM: Gemma 3 1B on 0.2.85
+
+WebLLM 0.2.85 can't load its own prebuilt `gemma3-1b-it-q4f16_1-MLC`. The
+model record sets `context_window_size: 4096`, the model's
+`mlc-chat-config.json` sets `sliding_window_size: 512`, and WebLLM refuses a
+config where both are positive (`WindowSizeConfigurationError`, seen on an
+Apple M4 Pro with Chrome 156). Keeping the sliding window instead fails too,
+because the model has no attention sink. The showcase config passes
+`options: { chatOpts: { sliding_window_size: -1 } }`; the WebLLM adapter hands
+`chatOpts` to `CreateMLCEngine`, which applies it after the model record.
+Prompts in these suites are well under 1,000 tokens, so the window setting
+doesn't change results.
+
 ## Networks with TLS-intercepting proxies
 
 The runner passes `$HTTPS_PROXY` to the browser; set `proxy: false` to disable

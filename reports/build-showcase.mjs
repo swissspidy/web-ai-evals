@@ -14,7 +14,10 @@ const wrap = (html) =>
     : `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n${html.replace(/<main\b/, '</head>\n<body>\n<main')}\n</body>\n</html>\n`;
 // Each cell remembers its run, so rows from different machines stay apart.
 const cells = runs.flatMap((r, i) => r.cells.map((c) => ({ ...c, run: i })));
-const multi = runs.length > 1;
+// Several runs from the same computer share one machine line; rows get a machine label only when machines differ.
+const machineKey = (r) => [r.host.platform, r.host.cpuModel, r.host.cores, r.host.memoryBytes].join('|');
+const machines = [...Map.groupBy(runs, machineKey).values()];
+const multi = machines.length > 1;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const sec = (ms) => (ms === undefined ? '—' : ms >= 10000 ? `${(ms / 1000).toFixed(0)} s` : ms >= 1000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms)} ms`);
 
@@ -59,16 +62,19 @@ const hasGpu = (r) => r.cells.some((c) => c.environment.gpu);
 const tag = (r) => `${machineName(r)} · ${hasGpu(r) ? 'GPU' : 'no GPU'}`;
 
 /** One line per machine, from any cell of that run (loaded or not). */
-function machineLine(r) {
-  const cell = r.cells.find((c) => c.load.status === 'ok') ?? r.cells[0];
+function machineLine(group) {
+  const r = group[0];
+  const all = group.flatMap((g) => g.cells);
+  const cell = all.find((c) => c.load.status === 'ok') ?? all[0];
   if (!cell) return '';
   const e = cell.environment;
-  const gpu = r.cells.map((c) => c.environment.gpu).find(Boolean);
+  const gpu = all.map((c) => c.environment.gpu).find(Boolean);
   // Every built-in model that ran on this machine (Gemini Nano, Gemma 4, …) with its version.
-  const models = [...new Map(r.cells.filter((c) => c.backend.kind === 'prompt-api' && c.load.status === 'ok').map((c) => [c.backend.id, c.environment.backend])).values()];
+  const models = [...new Map(all.filter((c) => c.backend.kind === 'prompt-api' && c.load.status === 'ok').map((c) => [c.backend.id, c.environment.backend])).values()];
+  const versions = [...new Set(all.map((c) => c.environment.browser.version))].map(esc).join(', ');
   const parts = [
     ...(multi ? [`<strong>${esc(tag(r))}</strong>`] : []),
-    `${esc(e.browser.name)} ${esc(e.browser.version)} (${esc(e.browser.channel ?? '')}, ${e.browser.headless ? 'headless' : 'headful'})`,
+    `${esc(e.browser.name)} ${versions} (${esc(e.browser.channel ?? '')}, ${e.browser.headless ? 'headless' : 'headful'})`,
     `${esc(e.os.platform)} ${esc(e.os.arch)}`,
     `${esc(e.hardware.cpuModel ?? r.host.cpuModel ?? '')} · ${num(e.hardware.cores)} cores · ${num(Math.round((e.hardware.memoryBytes ?? r.host.memoryBytes) / 2 ** 30))} GiB`,
     gpu ? `GPU ${esc([gpu.vendor, gpu.architecture, gpu.description].filter(Boolean).join(' '))}` : 'no GPU, no WebGPU adapter',
@@ -98,11 +104,14 @@ function bars(rows, value, max, fmt, cls) {
 /** Machine label under a row's name, only when the report merges several machines. */
 const where = (c) => (multi ? `<small>${esc(tag(runs[c.run]))}</small>` : '');
 
+/** First sentence of an error message, so long library errors stay readable. */
+const firstSentence = (e) => String(e).split(/\.\s|\n/)[0].replace(/\.$/, '').slice(0, 200);
+
 function notMeasured(r, skipped) {
   if (!skipped.length) return '';
   // "No WebGPU adapter" only for the in-page WebGPU runtimes on a machine without one; anything else keeps its own error.
   const needsAdapter = (c) => !hasGpu(r) && (c.backend.kind === 'webllm' || (c.backend.kind === 'transformers' && c.backend.device !== 'wasm'));
-  const reason = (c) => (needsAdapter(c) ? 'No WebGPU adapter' : String(c.load.error ?? c.load.status).slice(0, 120));
+  const reason = (c) => (needsAdapter(c) ? 'No WebGPU adapter' : firstSentence(c.load.error ?? c.load.status));
   const groups = Map.groupBy(skipped, reason);
   const label = (c) => `${esc((NAMES[c.backend.id] ?? [c.backend.id])[0])} (${esc((NAMES[c.backend.id] ?? ['', ''])[1])})`;
   return `<p class="na">Not measured on ${multi ? `the ${esc(machineName(r))}` : 'this machine'}: ${[...groups].map(([why, cs]) => `${cs.map(label).join(', ')}. ${esc(why.replace(/\.$/, ''))}.`).join(' ')}</p>`;
@@ -264,6 +273,24 @@ function g4Finding() {
   return `<li><span><strong>${head}</strong> (${esc(machineName(runs[gpuRun]))}, Chrome ${esc(cells.find((c) => c.run === gpuRun).environment.browser.version)}): ${detail}.${hard} Gemini Nano answers sooner (time to first token ${sec(n.summary.ttftMs?.p50)} vs ${sec(g.summary.ttftMs?.p50)} for Gemma 4 on ${first})${streams}.${cpuRun >= 0 ? ' Gemma 4 needs a GPU: on the CPU-only machine, Chrome 154 downloaded it but crashed every time it created a session.' : ''}</span></li>`;
 }
 
+/** Gemma 3 1B in the page (Transformers.js, WebGPU) against Gemini Nano on the same computer. */
+function gemma3Finding() {
+  if (gpuRun < 0) return '';
+  const key = machineKey(runs[gpuRun]);
+  const cmp = SUITE_IDS.map((id) => {
+    const t = cells.find((c) => c.dataset.id === id && c.backend.id === 'gemma3-1b-tjs-webgpu' && c.load.status === 'ok' && machineKey(runs[c.run]) === key);
+    const n = ok(id, 'gemini-nano', gpuRun);
+    return t && n ? { id, t, nano: n, ...compare(t, n, METRIC[id]) } : undefined;
+  }).filter((c) => c?.n);
+  if (!cmp.length) return '';
+  const worse = cmp.filter((c) => c.hi < 0).map((c) => c.id);
+  const better = cmp.filter((c) => c.lo > 0).map((c) => c.id);
+  const quality = [worse.length && `scores below Gemini Nano on ${list(worse)}`, better.length && `above it on ${list(better)}`].filter(Boolean).join(' and ') || 'scores level with Gemini Nano';
+  const faster = cmp.filter((c) => lat(c.t) < lat(c.nano)).length;
+  const speed = faster === cmp.length ? 'faster than Gemini Nano on every suite' : faster === 0 ? 'slower than Gemini Nano on every suite' : `faster than Gemini Nano on ${faster} of ${cmp.length} suites`;
+  return `<li><span><strong>Gemma 3 1B in the page (Transformers.js on WebGPU) is ${speed} on the ${esc(machineName(runs[gpuRun]))}, but ${quality}</strong>: ${cmp.map((c) => `${FINDING_LABEL[c.id]} ${c.a.toFixed(3)} vs ${c.b.toFixed(3)} (95% CI of the difference ${signed(c.lo)} to ${signed(c.hi)}) at ${sec(lat(c.t))} vs ${sec(lat(c.nano))} per example`).join('; ')}. The page downloads this ${esc(cmp[0].t.environment.backend.dtype ?? '')} model itself, while Gemini Nano ships with Chrome.</span></li>`;
+}
+
 function nanoHwFinding() {
   if (!nanoHw.length) return '';
   // Only the examples both runs share, so a suite that grew in between doesn't skew the comparison.
@@ -279,6 +306,15 @@ function nanoHwFinding() {
   const grew = rows.some((x) => x.cmp.n < Math.max(nanoHw.find(([id]) => id === x.id)[1].summary.total, nanoHw.find(([id]) => id === x.id)[2].summary.total));
   return `<li><span><strong>Gemini Nano is ${Math.min(...r).toFixed(0)}–${Math.max(...r).toFixed(0)}× faster on the ${esc(machineName(runs[gpuRun]))}'s GPU than on the CPU-only machine</strong>. Median time per example${grew ? ' on the examples both runs share' : ''}: ${rows.map((x) => `${sec(x.g)} vs ${sec(x.c)} on ${x.id}`).join(', ')}.${tr ? ` Its scores differ too (translation chrF ${tr.cmp.a.toFixed(3)} vs ${tr.cmp.b.toFixed(3)} on the same ${tr.cmp.n} sentences), but Chrome ships different Nano builds for GPU and CPU and the two machines ran different Chrome versions, so the score gap isn't down to the hardware alone.` : ''}</span></li>`;
 }
+
+// GPU backends without a successful cell, with what they need (or why they failed where they were tried).
+const NEEDS = { 'phi-4-mini': 'needs Edge Dev or Canary on Windows or macOS with a GPU', 'gemma3-1b-webllm': 'needs a WebGPU adapter with shader-f16', 'gemma3-1b-tjs-webgpu': 'needs a WebGPU adapter with shader-f16' };
+const missingGpu = Object.keys(NEEDS)
+  .filter((id) => !cells.some((c) => c.backend.id === id && c.load.status === 'ok'))
+  .map((id) => {
+    const failed = cells.find((c) => c.backend.id === id && c.load.status === 'error' && hasGpu(runs[c.run]));
+    return { id, why: failed ? `failed to load on the ${machineName(runs[failed.run])} (${firstSentence(failed.load.error)})` : NEEDS[id] };
+  });
 
 const html = `<title>Built-in AI vs In-Page Models</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -352,11 +388,12 @@ pre { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6p
   <span class="eyebrow">web-ai-evals · first report · ${esc(run.startedAt.slice(0, 10))}${multi ? ` · updated ${esc(runs.at(-1).startedAt.slice(0, 10))}` : ''}</span>
   <h1>Built-in AI vs in-page models, same prompts, same browser</h1>
   <p>Four task suites run through Chrome's built-in Gemini Nano${g4.length ? ' and Gemma 4 (behind a Chrome flag)' : ''}, Chrome's Summarizer and Translator APIs, and a Transformers.js model, all inside a real Chrome tab driven by Playwright. Every number below comes from ${runs.length === 1 ? 'one run' : `${runs.length} runs`} on the machine${runs.length === 1 ? '' : 's'} listed here.${gpuMeasured ? '' : ' The GPU backends from the comparison plan (Phi-4-mini in Edge, Gemma 3 via WebLLM and Transformers.js WebGPU) could not run there and are listed as not measured.'}</p>
-  ${runs.map(machineLine).join('\n  ')}
+  ${machines.map(machineLine).join('\n  ')}
 </div>
 
 <ol class="findings">
   ${g4Finding()}
+  ${gemma3Finding()}
   ${nanoHwFinding()}
   ${s.nanoSent && s.qwenSent ? `<li><span><strong>On CPU, Gemini Nano matches or beats a 0.5B in-page model on every suite</strong>: sentiment accuracy ${f3(s.nanoSent, 'accuracy')} vs ${f3(s.qwenSent, 'accuracy')}, extraction field accuracy ${f3(s.nanoExt, 'fields')} vs ${f3(s.qwenExt, 'fields')}${s.nanoTr && s.qwenTr ? `, translation chrF ${f3(s.nanoTr, 'chrF')} vs ${f3(s.qwenTr, 'chrF')}` : ''}.</span></li>
   <li><span><strong>It is also faster</strong>. Median time to first token ${sec(s.nanoSent?.summary.ttftMs?.p50)} vs ${sec(s.qwenSent?.summary.ttftMs?.p50)} on sentiment; a summary takes ${sec(lat(s.nanoSum))} vs ${sec(lat(s.qwenSum))}. Chrome's native CPU inference outruns ONNX Runtime Web's Wasm backend by a wide margin.</span></li>` : ''}
@@ -380,7 +417,7 @@ ${['sentiment', 'summarization', 'extraction', 'translation'].map(suiteSection).
   <div>
     <h2>What is missing</h2>
     ${s.tr ? '' : `<p>Chrome's Translator API could not create an en→de translator in this run, so it has no score here.</p>`}
-    <p>Phi-4-mini needs Edge Dev or Canary on Windows or macOS with a GPU. Gemma 3 via WebLLM and Transformers.js WebGPU need a WebGPU adapter with <code>shader-f16</code>.${gpuRun >= 0 ? ` The ${esc(machineName(runs[gpuRun]))} run covered only the built-in models.` : ''} The same config measures them on a GPU machine, and the report tool merges runs from several machines:</p>
+    ${missingGpu.length ? `<p>Not measured yet: ${missingGpu.map(({ id, why }) => `${esc((NAMES[id] ?? [id])[0])} (${esc((NAMES[id] ?? ['', ''])[1])}), which ${esc(why)}`).join('; ')}. The same config measures them, and the report tool merges runs from several machines:</p>` : '<p>Every backend in the comparison plan has been measured. To add a machine, run the same config there; the report tool merges runs from several machines:</p>'}
     <pre>pnpm wae run --config showcase.config.ts
 pnpm wae report results/cpu.json results/gpu.json</pre>
   </div>

@@ -37,7 +37,18 @@ export default defineConfig({
     { id: 'gemini-nano', kind: 'prompt-api', browsers: ['chrome'] },
     { id: 'phi-4-mini', kind: 'prompt-api', browsers: ['edge'] },
     { id: 'gemma4-builtin', kind: 'prompt-api', browsers: ['chrome-gemma4'] },
-    { id: 'gemma3-1b-webllm', kind: 'webllm', model: 'gemma3-1b-it-q4f16_1-MLC', generation, browsers: ['chrome'] },
+    // WebLLM 0.2.85's record for this model sets a 4096-token context window while the model's own
+    // config also sets a 512-token sliding window, and WebLLM refuses both ("Only one of
+    // context_window_size and sliding_window_size can be positive"). The sliding window can't be the
+    // one kept (the model has no attention sink), so turn it off. Prompts here are under 1k tokens.
+    {
+      id: 'gemma3-1b-webllm',
+      kind: 'webllm',
+      model: 'gemma3-1b-it-q4f16_1-MLC',
+      options: { chatOpts: { sliding_window_size: -1 } },
+      generation,
+      browsers: ['chrome'],
+    },
     {
       id: 'gemma3-1b-tjs-webgpu',
       kind: 'transformers',

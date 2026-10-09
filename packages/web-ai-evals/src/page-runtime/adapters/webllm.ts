@@ -38,10 +38,16 @@ export const webllmAdapter: BackendAdapter = {
   async load(spec, task, ctx): Promise<LoadedBackend> {
     const webllm = await loadWebLLM();
     const model = spec.model!;
-    const engine = await webllm.CreateMLCEngine(model, {
-      appConfig: spec.options?.appConfig as never,
-      initProgressCallback: (report) => ctx.onProgress({ progress: report.progress, text: report.text }),
-    });
+    // `options.chatOpts` overrides the model's mlc-chat-config.json (WebLLM applies it last).
+    const chatOpts = spec.options?.chatOpts as Record<string, unknown> | undefined;
+    const engine = await webllm.CreateMLCEngine(
+      model,
+      {
+        appConfig: spec.options?.appConfig as never,
+        initProgressCallback: (report) => ctx.onProgress({ progress: report.progress, text: report.text }),
+      },
+      chatOpts as never,
+    );
     const record = webllm.prebuiltAppConfig.model_list.find((m) => m.model_id === model);
     return {
       info: {
@@ -49,7 +55,7 @@ export const webllmAdapter: BackendAdapter = {
         modelVersion: webllm.modelVersion,
         dtype: /-(q\d+f\d+(?:_\d+)?)-MLC/.exec(model)?.[1],
         device: 'webgpu',
-        details: { vramRequiredMB: record?.vram_required_MB, modelLib: record?.model_lib, lowResourceRequired: record?.low_resource_required },
+        details: { vramRequiredMB: record?.vram_required_MB, modelLib: record?.model_lib, lowResourceRequired: record?.low_resource_required, chatOpts },
       },
       async run(request, rctx) {
         await engine.resetChat();

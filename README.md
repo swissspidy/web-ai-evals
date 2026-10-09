@@ -33,8 +33,8 @@ suite (JSONL) × backends × browsers  ──►  results/<runId>.json  ──�
 | Summarizer / Writer / Rewriter | `summarizer`, `writer`, `rewriter` | ✅ Summarizer on Chrome 154 (see the known issue with `plain-text`); Writer and Rewriter need the `writing-apis` flag preset |
 | Translator | `translator` | ✅ Chrome 154 (fails on first use until Chrome installs the translation runtime; the runner retries — [details](docs/browser-automation.md#known-api-issues-seen-during-runs-chrome-154-stable-linux-cpu-backend)) |
 | Classifier (WebAI Studio extension polyfill) | `classifier` | ⚠️ needs the extension installed in the profile |
-| WebLLM | `webllm` | ⚠️ needs a WebGPU adapter; SwiftShader loses the device |
-| Transformers.js WebGPU | `transformers` + `device: webgpu` | ⚠️ needs a WebGPU adapter with `shader-f16` for q4f16 |
+| WebLLM | `webllm` | ⚠️ needs a WebGPU adapter; SwiftShader loses the device. Gemma 3 1B needs `chatOpts: { sliding_window_size: -1 }` on WebLLM 0.2.85 (set in `showcase.config.ts`, not yet re-run) |
+| Transformers.js WebGPU | `transformers` + `device: webgpu` | ✅ Chrome 156, macOS, Apple M4 Pro GPU (Gemma 3 1B q4f16); needs a WebGPU adapter with `shader-f16` |
 | Transformers.js Wasm | `transformers` + `device: wasm` | ✅ Chrome 154 (Qwen2.5-0.5B q4) |
 | Mock (deterministic, for tests) | `mock` | ✅ CI |
 
@@ -305,9 +305,12 @@ Headline results:
   on summaries).
 - Gemini Nano is 4–9× faster per example on the M4 Pro's GPU than on the
   CPU-only machine.
+- Gemma 3 1B in the page (Transformers.js on WebGPU) is faster than Gemini
+  Nano on the M4 Pro (89 ms vs 151 ms per sentiment example) but scores lower
+  on sentiment (0.717 vs 0.940), extraction and translation.
 
-Phi-4-mini and Gemma 3 via WebLLM and Transformers.js WebGPU are still to be
-measured; see [reports/README.md](reports/README.md) for how to add them.
+Phi-4-mini and Gemma 3 via WebLLM are still to be measured; see
+[reports/README.md](reports/README.md) for how to add them.
 
 **Headless:** the Prompt API and Summarizer work in Chrome's new headless mode
 once the model is in the profile, with timings matching headful.
