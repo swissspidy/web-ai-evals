@@ -68,6 +68,7 @@ export const webllmAdapter: BackendAdapter = {
         const gen = { ...spec.generation, ...request.generation };
         const schema = request.input.schema ?? request.task.responseSchema;
         // `options.logprobs: 1-5` records the first sampled tokens with their top alternatives (slower).
+        // WebLLM computes them after temperature, so at temperature 0 they are one-hot.
         const topLogprobs = spec.options?.logprobs as number | undefined;
         const onAbort = () => engine.interruptGenerate();
         rctx.signal.addEventListener('abort', onAbort, { once: true });
@@ -96,7 +97,7 @@ export const webllmAdapter: BackendAdapter = {
             if (choice?.finish_reason) finishReason = choice.finish_reason;
             // The prefill chunk carries the first sampled token even when it is a stop token.
             for (const lp of choice?.logprobs?.content ?? []) {
-              if (steps.length < LOGPROB_STEPS) steps.push({ token: lp.token, logprob: round(lp.logprob), top: lp.top_logprobs.map((t) => [t.token, round(t.logprob)]) });
+              if (steps.length < LOGPROB_STEPS) steps.push({ token: lp.token, logprob: round(lp.logprob), top: (lp.top_logprobs ?? []).map((t) => [t.token, round(t.logprob)]) });
             }
             if (chunk.usage) usage = chunk.usage as unknown as Record<string, unknown>;
           }

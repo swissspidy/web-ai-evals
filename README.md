@@ -33,7 +33,7 @@ suite (JSONL) × backends × browsers  ──►  results/<runId>.json  ──�
 | Summarizer / Writer / Rewriter | `summarizer`, `writer`, `rewriter` | ✅ Summarizer on Chrome 154 (see the known issue with `plain-text`); Writer and Rewriter need the `writing-apis` flag preset |
 | Translator | `translator` | ✅ Chrome 154 (fails on first use until Chrome installs the translation runtime; the runner retries — [details](docs/browser-automation.md#known-api-issues-seen-during-runs-chrome-154-stable-linux-cpu-backend)) |
 | Classifier (WebAI Studio extension polyfill) | `classifier` | ⚠️ needs the extension installed in the profile |
-| WebLLM | `webllm` | ⚠️ runs on Chrome 156, macOS, Apple M4 Pro GPU, but Gemma 3 1B only loads with `chatOpts: { sliding_window_size: -1 }` on WebLLM 0.2.85 and then returns empty answers for most summaries ([details](docs/browser-automation.md#webllm-gemma-3-1b-on-0285)); SwiftShader loses the device |
+| WebLLM | `webllm` | ⚠️ runs on Chrome 156, macOS, Apple M4 Pro GPU, but Gemma 3 1B only loads with `chatOpts: { sliding_window_size: -1 }` on WebLLM 0.2.85 and then returns empty answers for most summaries, a fault in WebLLM's Gemma 3 build ([details](docs/browser-automation.md#webllm-gemma-3-1b-on-0285)); SwiftShader loses the device |
 | Transformers.js WebGPU | `transformers` + `device: webgpu` | ✅ Chrome 156, macOS, Apple M4 Pro GPU (Gemma 3 1B q4f16); needs a WebGPU adapter with `shader-f16` |
 | Transformers.js Wasm | `transformers` + `device: wasm` | ✅ Chrome 154 (Qwen2.5-0.5B q4) |
 | Mock (deterministic, for tests) | `mock` | ✅ CI |
@@ -310,8 +310,9 @@ Headline results:
   on sentiment (0.717 vs 0.940), extraction and translation.
 
 - The same Gemma 3 1B model on WebLLM scores below its Transformers.js run on
-  every suite. With the sliding-window workaround it returns empty answers for
-  46 of 60 summaries.
+  every suite and returns empty answers for 46 of 60 summaries, with every
+  window setting tried. Transformers.js gets the same prompt tokens, so the
+  fault is in WebLLM's Gemma 3 build.
 
 Phi-4-mini is still to be measured; see [reports/README.md](reports/README.md)
 for how to add it.

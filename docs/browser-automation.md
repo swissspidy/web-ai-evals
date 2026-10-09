@@ -179,42 +179,48 @@ WebLLM 0.2.85 can't load its own prebuilt `gemma3-1b-it-q4f16_1-MLC`. The
 model record sets `context_window_size: 4096`, the model's
 `mlc-chat-config.json` sets `sliding_window_size: 512`, and WebLLM refuses a
 config where both are positive (`WindowSizeConfigurationError`, seen on an
-Apple M4 Pro with Chrome 156). Keeping the sliding window instead fails too,
-because the model has no attention sink. The showcase config passes
+Apple M4 Pro with Chrome 156). The showcase config passes
 `options: { chatOpts: { sliding_window_size: -1 } }`; the WebLLM adapter hands
 `chatOpts` to `CreateMLCEngine`, which applies it after the model record.
 Prompts in these suites are well under 1,000 tokens.
 
 With that setting the model loads (1.5 s from the cache on an M4 Pro) and runs
 every example, but the answers are worse than the same model on Transformers.js:
-WebLLM reports 0 output tokens for 46 of 60 summaries and 5 of 200
-translations, and 6 of 150 extraction answers run to the token limit on
-whitespace. Short prompts (sentiment) look normal. The summary prompts are only
-about 150 tokens, inside both window sizes, so the cause isn't clear from these
-runs. The chat template isn't it: WebLLM's reported prompt token counts match
-Gemma 3's template exactly. Some non-empty summaries begin "Please provide a
-summary of the article", as if the model didn't see the article. The report
-shows the scores with that caveat.
+WebLLM ends its answer at the first token (`<end_of_turn>`) for 46 of 60
+summaries and 5 of 200 translations, and 6 of 150 extraction answers run to the
+token limit on whitespace. Eleven of the 14 summaries it does write begin
+"Please provide a summary of the article", as if the article weren't there.
+Sentiment and translation scores are lower too.
 
-To narrow it down, `WAE_WEBLLM_DIAG=1` adds two variants and records the first
-eight sampled tokens of each answer with their top-5 alternatives
-(`extra.logprobs`, next to `extra.finishReason`):
+What's been ruled out:
 
-| Backend | `chatOpts` | Tests |
-|---|---|---|
-| `gemma3-1b-webllm` | `sliding_window_size: -1` | the current workaround |
-| `gemma3-1b-webllm-swa` | `context_window_size: -1, attention_sink_size: 0` | keeping the model's 512-token sliding window |
-| `gemma3-1b-webllm-cs1k` | as the first, plus `prefill_chunk_size: 1024` | prefill chunks matching the `cs1k` model library (the model config says 8192) |
+- **The prompt.** WebLLM's reported prompt token counts match Gemma 3's chat
+  template token for token, and Transformers.js, given the same template,
+  summarizes all 60 articles.
+- **The window setting.** A diagnostic run
+  ([`run-m4pro-webllm-diag.json`](../reports/2026-09-29-cpu/run-m4pro-webllm-diag.json),
+  summaries only) tried two other settings. Keeping the 512-token sliding window
+  (`context_window_size: -1, attention_sink_size: 0`) and matching the `cs1k`
+  model library's 1k prefill chunks (`prefill_chunk_size: 1024`; the model
+  config says 8192) both give the same 46 empty answers.
+
+So the problem is in WebLLM's Gemma 3 build, not in this project's setup. The
+report shows the scores with that caveat.
+
+`WAE_WEBLLM_DIAG=1` runs the next check. It adds Gemma 2 2B on WebLLM as a
+control (same chat format, no window override needed) and records the first
+eight tokens of each answer with their top-5 alternatives (`extra.logprobs`,
+next to `extra.finishReason`). WebLLM computes logprobs after temperature, so
+they are one-hot at temperature 0; diagnostics decode at temperature 1 with
+`top_p` at WebLLM's 1e-5 minimum, which still picks the most likely token.
 
 ```sh
 WAE_WEBLLM_DIAG=1 pnpm wae run --config showcase.config.ts --browsers chrome \
-  --backends gemma3-1b-webllm,gemma3-1b-webllm-swa,gemma3-1b-webllm-cs1k --suites summarization
+  --backends gemma3-1b-webllm,gemma2-2b-webllm --suites summarization
 ```
 
-If one variant stops returning empty answers, that setting is the cause. If
-none does, the logprobs show whether `<end_of_turn>` wins by a wide margin (the
-model's choice) or the distribution looks broken (a numerical problem in the
-q4f16 build).
+If Gemma 2 summarizes normally, the fault is specific to WebLLM's Gemma 3
+build. The logprobs show how sure Gemma 3 is of `<end_of_turn>`.
 
 ## Networks with TLS-intercepting proxies
 
