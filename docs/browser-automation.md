@@ -183,8 +183,16 @@ Apple M4 Pro with Chrome 156). Keeping the sliding window instead fails too,
 because the model has no attention sink. The showcase config passes
 `options: { chatOpts: { sliding_window_size: -1 } }`; the WebLLM adapter hands
 `chatOpts` to `CreateMLCEngine`, which applies it after the model record.
-Prompts in these suites are well under 1,000 tokens, so the window setting
-doesn't change results.
+Prompts in these suites are well under 1,000 tokens.
+
+With that setting the model loads (1.5 s from the cache on an M4 Pro) and runs
+every example, but the answers are worse than the same model on Transformers.js:
+WebLLM reports 0 output tokens for 46 of 60 summaries and 5 of 200
+translations, and 6 of 150 extraction answers run to the token limit on
+whitespace. Short prompts (sentiment) look normal. The summary prompts are only
+about 150 tokens, inside both window sizes, so the cause isn't clear from these
+runs: it may be the WebLLM build, its Gemma 3 chat template, or the setting
+above. The report shows the scores with that caveat.
 
 ## Networks with TLS-intercepting proxies
 

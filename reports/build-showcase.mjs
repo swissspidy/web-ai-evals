@@ -273,22 +273,54 @@ function g4Finding() {
   return `<li><span><strong>${head}</strong> (${esc(machineName(runs[gpuRun]))}, Chrome ${esc(cells.find((c) => c.run === gpuRun).environment.browser.version)}): ${detail}.${hard} Gemini Nano answers sooner (time to first token ${sec(n.summary.ttftMs?.p50)} vs ${sec(g.summary.ttftMs?.p50)} for Gemma 4 on ${first})${streams}.${cpuRun >= 0 ? ' Gemma 4 needs a GPU: on the CPU-only machine, Chrome 154 downloaded it but crashed every time it created a session.' : ''}</span></li>`;
 }
 
+/**
+ * Paired comparisons of two backends on the first computer where both ran at least one suite,
+ * whichever run files they came from.
+ */
+function sameMachinePairs(a, b) {
+  for (const group of machines) {
+    const inGroup = new Set(group.map((r) => runs.indexOf(r)));
+    const pick = (id, backend) => cells.find((c) => c.dataset.id === id && c.backend.id === backend && c.load.status === 'ok' && inGroup.has(c.run));
+    const pairs = SUITE_IDS.map((id) => ({ id, x: pick(id, a), y: pick(id, b) }))
+      .filter((p) => p.x && p.y)
+      .map((p) => ({ ...p, ...compare(p.x, p.y, METRIC[p.id]) }))
+      .filter((p) => p.n);
+    if (pairs.length) return { machine: group[0], pairs };
+  }
+  return undefined;
+}
+
+/** "scores below X on a and b" / "above it on c" / "scores level with X". */
+function qualityPhrase(pairs, other) {
+  const worse = pairs.filter((c) => c.hi < 0).map((c) => c.id);
+  const better = pairs.filter((c) => c.lo > 0).map((c) => c.id);
+  return [worse.length && `scores below ${other} on ${list(worse)}`, better.length && `above it on ${list(better)}`].filter(Boolean).join(' and ') || `scores level with ${other}`;
+}
+
+const pairDetail = (c) => `${FINDING_LABEL[c.id]} ${c.a.toFixed(3)} vs ${c.b.toFixed(3)} (95% CI of the difference ${signed(c.lo)} to ${signed(c.hi)}) at ${sec(lat(c.x))} vs ${sec(lat(c.y))} per example`;
+
 /** Gemma 3 1B in the page (Transformers.js, WebGPU) against Gemini Nano on the same computer. */
 function gemma3Finding() {
-  if (gpuRun < 0) return '';
-  const key = machineKey(runs[gpuRun]);
-  const cmp = SUITE_IDS.map((id) => {
-    const t = cells.find((c) => c.dataset.id === id && c.backend.id === 'gemma3-1b-tjs-webgpu' && c.load.status === 'ok' && machineKey(runs[c.run]) === key);
-    const n = ok(id, 'gemini-nano', gpuRun);
-    return t && n ? { id, t, nano: n, ...compare(t, n, METRIC[id]) } : undefined;
-  }).filter((c) => c?.n);
-  if (!cmp.length) return '';
-  const worse = cmp.filter((c) => c.hi < 0).map((c) => c.id);
-  const better = cmp.filter((c) => c.lo > 0).map((c) => c.id);
-  const quality = [worse.length && `scores below Gemini Nano on ${list(worse)}`, better.length && `above it on ${list(better)}`].filter(Boolean).join(' and ') || 'scores level with Gemini Nano';
-  const faster = cmp.filter((c) => lat(c.t) < lat(c.nano)).length;
-  const speed = faster === cmp.length ? 'faster than Gemini Nano on every suite' : faster === 0 ? 'slower than Gemini Nano on every suite' : `faster than Gemini Nano on ${faster} of ${cmp.length} suites`;
-  return `<li><span><strong>Gemma 3 1B in the page (Transformers.js on WebGPU) is ${speed} on the ${esc(machineName(runs[gpuRun]))}, but ${quality}</strong>: ${cmp.map((c) => `${FINDING_LABEL[c.id]} ${c.a.toFixed(3)} vs ${c.b.toFixed(3)} (95% CI of the difference ${signed(c.lo)} to ${signed(c.hi)}) at ${sec(lat(c.t))} vs ${sec(lat(c.nano))} per example`).join('; ')}. The page downloads this ${esc(cmp[0].t.environment.backend.dtype ?? '')} model itself, while Gemini Nano ships with Chrome.</span></li>`;
+  const found = sameMachinePairs('gemma3-1b-tjs-webgpu', 'gemini-nano');
+  if (!found) return '';
+  const { machine, pairs } = found;
+  const faster = pairs.filter((c) => lat(c.x) < lat(c.y)).length;
+  const speed = faster === pairs.length ? 'faster than Gemini Nano on every suite' : faster === 0 ? 'slower than Gemini Nano on every suite' : `faster than Gemini Nano on ${faster} of ${pairs.length} suites`;
+  return `<li><span><strong>Gemma 3 1B in the page (Transformers.js on WebGPU) is ${speed} on the ${esc(machineName(machine))}, but ${qualityPhrase(pairs, 'Gemini Nano')}</strong>: ${pairs.map(pairDetail).join('; ')}. The page downloads this ${esc(pairs[0].x.environment.backend.dtype ?? '')} model itself, while Gemini Nano ships with Chrome.</span></li>`;
+}
+
+/** The same Gemma 3 1B weights on WebLLM and on Transformers.js, on the same computer. */
+function runtimeFinding() {
+  const found = sameMachinePairs('gemma3-1b-webllm', 'gemma3-1b-tjs-webgpu');
+  if (!found) return '';
+  const { machine, pairs } = found;
+  // WebLLM reports how many tokens it produced, so an empty answer here means the model stopped at once.
+  const empties = pairs
+    .map((c) => ({ id: c.id, n: c.x.results.filter((r) => r.status === 'ok' && !r.output?.trim()).length, total: c.x.results.length }))
+    .filter((e) => e.n);
+  const chatOpts = pairs[0].x.environment.backend.details?.chatOpts;
+  const faster = pairs.filter((c) => lat(c.x) < lat(c.y)).length === pairs.length;
+  return `<li><span><strong>On WebLLM, the same Gemma 3 1B model ${qualityPhrase(pairs, 'its Transformers.js run')} on the ${esc(machineName(machine))}${faster ? ', though it answers faster' : ''}</strong>: ${pairs.map(pairDetail).join('; ')}.${empties.length ? ` WebLLM returned empty answers for ${list(empties.map((e) => `${e.n} of ${e.total} ${e.id} examples`))}; it reports 0 output tokens for them, so the model ends its answer at once.` : ''}${chatOpts ? ` This WebLLM build only loads with <code>${esc(JSON.stringify(chatOpts))}</code> (WebLLM 0.2.85's model record and the model's config disagree), so the gap may come from that setting rather than from the runtime itself.` : ''}</span></li>`;
 }
 
 function nanoHwFinding() {
@@ -394,6 +426,7 @@ pre { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6p
 <ol class="findings">
   ${g4Finding()}
   ${gemma3Finding()}
+  ${runtimeFinding()}
   ${nanoHwFinding()}
   ${s.nanoSent && s.qwenSent ? `<li><span><strong>On CPU, Gemini Nano matches or beats a 0.5B in-page model on every suite</strong>: sentiment accuracy ${f3(s.nanoSent, 'accuracy')} vs ${f3(s.qwenSent, 'accuracy')}, extraction field accuracy ${f3(s.nanoExt, 'fields')} vs ${f3(s.qwenExt, 'fields')}${s.nanoTr && s.qwenTr ? `, translation chrF ${f3(s.nanoTr, 'chrF')} vs ${f3(s.qwenTr, 'chrF')}` : ''}.</span></li>
   <li><span><strong>It is also faster</strong>. Median time to first token ${sec(s.nanoSent?.summary.ttftMs?.p50)} vs ${sec(s.qwenSent?.summary.ttftMs?.p50)} on sentiment; a summary takes ${sec(lat(s.nanoSum))} vs ${sec(lat(s.qwenSum))}. Chrome's native CPU inference outruns ONNX Runtime Web's Wasm backend by a wide margin.</span></li>` : ''}
@@ -417,7 +450,7 @@ ${['sentiment', 'summarization', 'extraction', 'translation'].map(suiteSection).
   <div>
     <h2>What is missing</h2>
     ${s.tr ? '' : `<p>Chrome's Translator API could not create an en→de translator in this run, so it has no score here.</p>`}
-    ${missingGpu.length ? `<p>Not measured yet: ${missingGpu.map(({ id, why }) => `${esc((NAMES[id] ?? [id])[0])} (${esc((NAMES[id] ?? ['', ''])[1])}), which ${esc(why)}`).join('; ')}. The same config measures them, and the report tool merges runs from several machines:</p>` : '<p>Every backend in the comparison plan has been measured. To add a machine, run the same config there; the report tool merges runs from several machines:</p>'}
+    ${missingGpu.length ? `<p>Not measured yet: ${missingGpu.map(({ id, why }) => `${esc((NAMES[id] ?? [id])[0])} (${esc((NAMES[id] ?? ['', ''])[1])}), which ${esc(why)}`).join('; ')}. The same config measures ${missingGpu.length === 1 ? 'it' : 'them'}, and the report tool merges runs from several machines:</p>` : '<p>Every backend in the comparison plan has been measured. To add a machine, run the same config there; the report tool merges runs from several machines:</p>'}
     <pre>pnpm wae run --config showcase.config.ts
 pnpm wae report results/cpu.json results/gpu.json</pre>
   </div>
