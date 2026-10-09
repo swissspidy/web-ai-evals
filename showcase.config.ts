@@ -56,7 +56,7 @@ export default defineConfig({
       generation: webllmGeneration,
       browsers: ['chrome'],
     },
-    // With WAE_WEBLLM_DIAG=1: Gemma 2 2B on WebLLM as a control (same chat format, older build).
+    // With WAE_WEBLLM_DIAG=1: Gemma 2 2B on WebLLM as a control (same chat format; it summarizes normally).
     ...(process.env.WAE_WEBLLM_DIAG
       ? [
           {

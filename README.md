@@ -311,8 +311,8 @@ Headline results:
 
 - The same Gemma 3 1B model on WebLLM scores below its Transformers.js run on
   every suite and returns empty answers for 46 of 60 summaries, with every
-  window setting tried. Transformers.js gets the same prompt tokens, so the
-  fault is in WebLLM's Gemma 3 build.
+  window setting tried. Transformers.js gets the same prompt tokens and Gemma 2
+  2B on WebLLM summarizes normally, so the fault is in WebLLM's Gemma 3 build.
 
 Phi-4-mini is still to be measured; see [reports/README.md](reports/README.md)
 for how to add it.

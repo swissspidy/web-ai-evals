@@ -203,24 +203,30 @@ What's been ruled out:
   (`context_window_size: -1, attention_sink_size: 0`) and matching the `cs1k`
   model library's 1k prefill chunks (`prefill_chunk_size: 1024`; the model
   config says 8192) both give the same 46 empty answers.
+- **WebLLM in general.** Gemma 2 2B on WebLLM uses the same chat format
+  and needs no window override. Through the same harness it summarizes all 60
+  articles (ROUGE-L 0.303, level with Gemma 3 on Transformers.js at 0.304)
+  ([`run-m4pro-webllm-gemma2.json`](../reports/2026-09-29-cpu/run-m4pro-webllm-gemma2.json)).
 
-So the problem is in WebLLM's Gemma 3 build, not in this project's setup. The
-report shows the scores with that caveat.
+The same run recorded Gemma 3's real first-token probabilities. Where it ends
+its answer at once, `<end_of_turn>` gets a median probability of 0.93 (0.50 to
+1.00); "Please" and "Okay" share most of the rest, and "The", which starts
+Transformers.js's summaries, gets almost nothing. The model behaves as if the
+article weren't in the prompt. So the fault is in WebLLM 0.2.85's Gemma 3
+build (its model library or converted weights), not in this project's setup
+or in WebLLM as a whole. The report shows the scores with that caveat.
 
-`WAE_WEBLLM_DIAG=1` runs the next check. It adds Gemma 2 2B on WebLLM as a
-control (same chat format, no window override needed) and records the first
-eight tokens of each answer with their top-5 alternatives (`extra.logprobs`,
-next to `extra.finishReason`). WebLLM computes logprobs after temperature, so
-they are one-hot at temperature 0; diagnostics decode at temperature 1 with
-`top_p` at WebLLM's 1e-5 minimum, which still picks the most likely token.
+To reproduce, `WAE_WEBLLM_DIAG=1` adds the Gemma 2 control and records the
+first eight tokens of each answer with their top-5 alternatives
+(`extra.logprobs`, next to `extra.finishReason`). WebLLM computes logprobs
+after temperature, so they are one-hot at temperature 0; diagnostics decode at
+temperature 1 with `top_p` at WebLLM's 1e-5 minimum, which still picks the
+most likely token (the Gemma 3 answers come out identical).
 
 ```sh
 WAE_WEBLLM_DIAG=1 pnpm wae run --config showcase.config.ts --browsers chrome \
   --backends gemma3-1b-webllm,gemma2-2b-webllm --suites summarization
 ```
-
-If Gemma 2 summarizes normally, the fault is specific to WebLLM's Gemma 3
-build. The logprobs show how sure Gemma 3 is of `<end_of_turn>`.
 
 ## Networks with TLS-intercepting proxies
 
