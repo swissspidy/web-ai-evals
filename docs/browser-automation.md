@@ -191,8 +191,30 @@ WebLLM reports 0 output tokens for 46 of 60 summaries and 5 of 200
 translations, and 6 of 150 extraction answers run to the token limit on
 whitespace. Short prompts (sentiment) look normal. The summary prompts are only
 about 150 tokens, inside both window sizes, so the cause isn't clear from these
-runs: it may be the WebLLM build, its Gemma 3 chat template, or the setting
-above. The report shows the scores with that caveat.
+runs. The chat template isn't it: WebLLM's reported prompt token counts match
+Gemma 3's template exactly. Some non-empty summaries begin "Please provide a
+summary of the article", as if the model didn't see the article. The report
+shows the scores with that caveat.
+
+To narrow it down, `WAE_WEBLLM_DIAG=1` adds two variants and records the first
+eight sampled tokens of each answer with their top-5 alternatives
+(`extra.logprobs`, next to `extra.finishReason`):
+
+| Backend | `chatOpts` | Tests |
+|---|---|---|
+| `gemma3-1b-webllm` | `sliding_window_size: -1` | the current workaround |
+| `gemma3-1b-webllm-swa` | `context_window_size: -1, attention_sink_size: 0` | keeping the model's 512-token sliding window |
+| `gemma3-1b-webllm-cs1k` | as the first, plus `prefill_chunk_size: 1024` | prefill chunks matching the `cs1k` model library (the model config says 8192) |
+
+```sh
+WAE_WEBLLM_DIAG=1 pnpm wae run --config showcase.config.ts --browsers chrome \
+  --backends gemma3-1b-webllm,gemma3-1b-webllm-swa,gemma3-1b-webllm-cs1k --suites summarization
+```
+
+If one variant stops returning empty answers, that setting is the cause. If
+none does, the logprobs show whether `<end_of_turn>` wins by a wide margin (the
+model's choice) or the distribution looks broken (a numerical problem in the
+q4f16 build).
 
 ## Networks with TLS-intercepting proxies
 

@@ -14,6 +14,7 @@ import { allSuites } from './suites/index.ts';
  *   WAE_UNSAFE_WEBGPU=1   enable WebGPU on Linux / software adapters
  *   WAE_BROWSERS=chrome   comma-separated subset of browser ids
  *   WAE_LIMIT=10          only the first N examples per suite (also: --limit)
+ *   WAE_WEBLLM_DIAG=1     WebLLM Gemma 3 diagnostics: logprobs and two config variants
  */
 const presets = [
   ...(process.env.WAE_FORCE_CPU ? ['force-cpu'] : []),
@@ -29,6 +30,8 @@ const browsers = [
 ].filter((b) => !process.env.WAE_BROWSERS || process.env.WAE_BROWSERS.split(',').includes(b.id));
 
 const generation = { maxTokens: 256, temperature: 0 };
+// WAE_WEBLLM_DIAG=1 records each answer's first tokens with their top-5 alternatives.
+const webllmDiag = process.env.WAE_WEBLLM_DIAG ? { logprobs: 5 } : {};
 
 export default defineConfig({
   name: 'Built-in AI vs in-page runtimes',
@@ -45,10 +48,25 @@ export default defineConfig({
       id: 'gemma3-1b-webllm',
       kind: 'webllm',
       model: 'gemma3-1b-it-q4f16_1-MLC',
-      options: { chatOpts: { sliding_window_size: -1 } },
+      options: { chatOpts: { sliding_window_size: -1 }, ...webllmDiag },
       generation,
       browsers: ['chrome'],
     },
+    // With WAE_WEBLLM_DIAG=1: the same model with the sliding window kept (attention sink 0 is
+    // WebLLM's default sliding window) and with prefill chunks matching the cs1k model library.
+    ...(process.env.WAE_WEBLLM_DIAG
+      ? [
+          { chatOpts: { context_window_size: -1, attention_sink_size: 0 }, id: 'gemma3-1b-webllm-swa' },
+          { chatOpts: { sliding_window_size: -1, prefill_chunk_size: 1024 }, id: 'gemma3-1b-webllm-cs1k' },
+        ].map(({ id, chatOpts }) => ({
+          id,
+          kind: 'webllm' as const,
+          model: 'gemma3-1b-it-q4f16_1-MLC',
+          options: { chatOpts, ...webllmDiag },
+          generation,
+          browsers: ['chrome'],
+        }))
+      : []),
     {
       id: 'gemma3-1b-tjs-webgpu',
       kind: 'transformers',

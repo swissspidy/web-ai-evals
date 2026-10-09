@@ -8,6 +8,9 @@ import { errorMessage } from './types.js';
  */
 const loadWebLLM = () => import('@mlc-ai/web-llm');
 
+const LOGPROB_STEPS = 8;
+const round = (x: number) => Math.round(x * 1000) / 1000;
+
 export const webllmAdapter: BackendAdapter = {
   kind: 'webllm',
   tasks: ['generate', 'summarize', 'write', 'rewrite', 'translate', 'classify', 'extract'],
@@ -64,6 +67,8 @@ export const webllmAdapter: BackendAdapter = {
         messages.push({ role: 'user', content: renderPrompt(request.task, request.input) });
         const gen = { ...spec.generation, ...request.generation };
         const schema = request.input.schema ?? request.task.responseSchema;
+        // `options.logprobs: 1-5` records the first sampled tokens with their top alternatives (slower).
+        const topLogprobs = spec.options?.logprobs as number | undefined;
         const onAbort = () => engine.interruptGenerate();
         rctx.signal.addEventListener('abort', onAbort, { once: true });
         try {
@@ -75,14 +80,23 @@ export const webllmAdapter: BackendAdapter = {
             temperature: gen.temperature ?? 0,
             top_p: gen.topP,
             response_format: schema && spec.options?.responseFormat !== false ? { type: 'json_object', schema: JSON.stringify(schema) } : undefined,
+            ...(topLogprobs !== undefined && { logprobs: true, top_logprobs: topLogprobs }),
           });
           let output = '';
           let usage: Record<string, unknown> | undefined;
+          let finishReason: string | undefined;
+          const steps: { token: string; logprob: number; top: [string, number][] }[] = [];
           for await (const chunk of stream) {
-            const delta = chunk.choices[0]?.delta?.content ?? '';
+            const choice = chunk.choices[0];
+            const delta = choice?.delta?.content ?? '';
             if (delta) {
               output += delta;
               rctx.onChunk(delta);
+            }
+            if (choice?.finish_reason) finishReason = choice.finish_reason;
+            // The prefill chunk carries the first sampled token even when it is a stop token.
+            for (const lp of choice?.logprobs?.content ?? []) {
+              if (steps.length < LOGPROB_STEPS) steps.push({ token: lp.token, logprob: round(lp.logprob), top: lp.top_logprobs.map((t) => [t.token, round(t.logprob)]) });
             }
             if (chunk.usage) usage = chunk.usage as unknown as Record<string, unknown>;
           }
@@ -91,7 +105,11 @@ export const webllmAdapter: BackendAdapter = {
             outputTokens: usage?.completion_tokens as number | undefined,
             inputTokens: usage?.prompt_tokens as number | undefined,
             tokenCountSource: usage ? 'reported' : undefined,
-            extra: usage?.extra ? { webllm: usage.extra } : undefined,
+            extra: {
+              finishReason,
+              ...(usage?.extra ? { webllm: usage.extra } : {}),
+              ...(steps.length ? { logprobs: steps } : {}),
+            },
           };
         } finally {
           rctx.signal.removeEventListener('abort', onAbort);
