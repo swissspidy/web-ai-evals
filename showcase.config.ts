@@ -14,6 +14,7 @@ import { allSuites } from './suites/index.ts';
  *   WAE_UNSAFE_WEBGPU=1   enable WebGPU on Linux / software adapters
  *   WAE_BROWSERS=chrome   comma-separated subset of browser ids
  *   WAE_LIMIT=10          only the first N examples per suite (also: --limit)
+ *   WAE_WEBLLM_DIAG=1     WebLLM Gemma 3 diagnostics: logprobs and a Gemma 2 control
  */
 const presets = [
   ...(process.env.WAE_FORCE_CPU ? ['force-cpu'] : []),
@@ -29,6 +30,11 @@ const browsers = [
 ].filter((b) => !process.env.WAE_BROWSERS || process.env.WAE_BROWSERS.split(',').includes(b.id));
 
 const generation = { maxTokens: 256, temperature: 0 };
+// WAE_WEBLLM_DIAG=1 records each answer's first tokens with their top-5 alternatives. WebLLM
+// computes those after temperature, so diagnostics decode at temperature 1 with top_p at its
+// 1e-5 minimum: still the most likely token every step, but with real probabilities.
+const webllmDiag = process.env.WAE_WEBLLM_DIAG ? { logprobs: 5 } : {};
+const webllmGeneration = process.env.WAE_WEBLLM_DIAG ? { ...generation, temperature: 1, topP: 1e-5 } : generation;
 
 export default defineConfig({
   name: 'Built-in AI vs in-page runtimes',
@@ -37,7 +43,32 @@ export default defineConfig({
     { id: 'gemini-nano', kind: 'prompt-api', browsers: ['chrome'] },
     { id: 'phi-4-mini', kind: 'prompt-api', browsers: ['edge'] },
     { id: 'gemma4-builtin', kind: 'prompt-api', browsers: ['chrome-gemma4'] },
-    { id: 'gemma3-1b-webllm', kind: 'webllm', model: 'gemma3-1b-it-q4f16_1-MLC', generation, browsers: ['chrome'] },
+    // WebLLM 0.2.85's record for this model sets a 4096-token context window while the model's own
+    // config also sets a 512-token sliding window, and WebLLM refuses both ("Only one of
+    // context_window_size and sliding_window_size can be positive"), so turn the sliding window off.
+    // Prompts here are under 1k tokens. Keeping the sliding window (attention_sink_size: 0) or
+    // using 1k prefill chunks gives the same answers (docs/browser-automation.md).
+    {
+      id: 'gemma3-1b-webllm',
+      kind: 'webllm',
+      model: 'gemma3-1b-it-q4f16_1-MLC',
+      options: { chatOpts: { sliding_window_size: -1 }, ...webllmDiag },
+      generation: webllmGeneration,
+      browsers: ['chrome'],
+    },
+    // With WAE_WEBLLM_DIAG=1: Gemma 2 2B on WebLLM as a control (same chat format; it summarizes normally).
+    ...(process.env.WAE_WEBLLM_DIAG
+      ? [
+          {
+            id: 'gemma2-2b-webllm',
+            kind: 'webllm' as const,
+            model: 'gemma-2-2b-it-q4f16_1-MLC',
+            options: webllmDiag,
+            generation: webllmGeneration,
+            browsers: ['chrome'],
+          },
+        ]
+      : []),
     {
       id: 'gemma3-1b-tjs-webgpu',
       kind: 'transformers',
