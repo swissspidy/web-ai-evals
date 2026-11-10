@@ -2,9 +2,11 @@
 
 - Status: Accepted
 - Date: 2026-09-29
-- Update (2026-10-07): the `@web-ai-evals/*` packages below were merged into
+- Updated 2026-10-07: the original `@web-ai-evals/*` packages were merged into
   one npm package, `web-ai-evals`, with the same modules as directories under
   `packages/web-ai-evals/src/`. The architecture is unchanged.
+- Updated 2026-11-10: names, the page RPC surface and the interface sketches
+  below were brought in line with the code.
 
 ## Context
 
@@ -40,33 +42,35 @@ Constraints that shape the design:
 ### 1. Two halves: a Node orchestrator and an in-page runtime
 
 ```
-┌────────────────────── Node: @web-ai-evals/runner ─────────────────────┐
+┌─────────────────────── Node: web-ai-evals runner ─────────────────────┐
 │ config (datasets × backends × browsers)                               │
 │   │                                                                   │
 │   ├─ static server on 127.0.0.1:<fixed port>  ──serves──┐             │
-│   ├─ Playwright launchPersistentContext(profile, channel)│             │
-│   │     (one browser at a time)                          ▼             │
+│   ├─ Playwright launchPersistentContext(profile, channel)│            │
+│   │     (one browser at a time)                          ▼            │
 │   │            ┌──────────── Browser tab ─────────────────────────┐   │
-│   │  evaluate  │ @web-ai-evals/page-runtime  (window.__wae)       │   │
+│   │  evaluate  │ page runtime  (window.__wae)                     │   │
 │   │ ─────────▶ │  environment() → Environment                     │   │
-│   │            │  load(backendSpec) → LoadReport  ──progress──▶   │   │
-│   │            │  run(example) → ExampleOutput (timings, output)  │   │
+│   │            │  armLoad + awaitLoad → LoadReport ──progress──▶  │   │
+│   │            │  run(request) → TaskResponse (timings, output)   │   │
 │   │ ◀───────── │  adapters: prompt-api | summarizer | writer |    │   │
 │   │  results   │   rewriter | translator | classifier | webllm |  │   │
-│   │            │   transformers (webgpu|wasm)                     │   │
+│   │            │   transformers (webgpu|wasm) | mock              │   │
 │   │            └──────────────────────────────────────────────────┘   │
-│   ├─ scorers (@web-ai-evals/scorers) run in Node, incl. LLM judge     │
-│   └─ writes results/<runId>.json  →  @web-ai-evals/report (HTML/diff) │
+│   ├─ scorers (web-ai-evals/scorers) run in Node, incl. LLM judge      │
+│   └─ writes results/<runId>.json  →  web-ai-evals/report (HTML/diff)  │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
 - **Page runtime** is a browser bundle (built with esbuild) that exposes a small
-  RPC surface on `window.__wae`: `environment()`, `availability(spec)`,
-  `load(spec)`, `run(request)`, `unload()`. It measures time itself with
+  RPC surface on `window.__wae`: `environment()`, `availability(spec, task)`,
+  `armLoad(spec, task)` + `awaitLoad()` (the load starts on a trusted click, see
+  [browser-automation.md](../browser-automation.md#user-activation)),
+  `run(request)`, `unload()`. It measures time itself with
   `performance.now()` so Node↔page latency never pollutes TTFT or throughput.
 - **Runner** is the only thing that knows about configs, files, retries,
   timeouts and scoring. It drives the page with `page.evaluate` and receives
-  progress events through `page.exposeBinding`. Examples are streamed one at a
+  progress events through an exposed binding. Examples are streamed one at a
   time, so a timeout or crash affects one example and the runner can reload the
   page and continue.
 - The page is served from `http://127.0.0.1:<port>` with a **fixed default
@@ -99,11 +103,14 @@ Node→page boundary:
 ```ts
 interface BackendSpec {
   id: string;            // unique label in reports, e.g. "gemma-2b-webllm"
-  kind: BackendKind;     // 'prompt-api' | 'summarizer' | 'writer' | 'rewriter'
-                         // | 'translator' | 'classifier' | 'webllm' | 'transformers'
+  kind: BackendKind;     // 'prompt-api' | 'summarizer' | 'writer' | 'rewriter' | 'translator'
+                         // | 'classifier' | 'webllm' | 'transformers' | 'mock'
   model?: string;        // model id where the backend takes one
-  device?: 'webgpu' | 'wasm';
+  device?: Device;       // 'webgpu' | 'wasm' | ...
+  dtype?: string;        // quantization, e.g. "q4f16"
   options?: Record<string, unknown>; // passed through to the underlying API
+  generation?: GenerationOptions;    // maxTokens, temperature, ...
+  browsers?: string[];   // runner-side: only run in these browser ids
 }
 ```
 
@@ -113,22 +120,23 @@ In the page, each kind has an **adapter**:
 interface BackendAdapter {
   kind: BackendKind;
   tasks: TaskType[];                                  // what it can run
-  availability(spec): Promise<Availability>;          // never throws
-  load(spec, ctx: { onProgress, signal }): Promise<LoadedBackend>;
+  availability(spec, task): Promise<AvailabilityReport>;   // never throws
+  load(spec, task, ctx: { onProgress, signal }): Promise<LoadedBackend>;
 }
 
 interface LoadedBackend {
   info: ModelInfo;                                    // model id/version, dtype…
-  run(req: TaskRequest, ctx: { signal, onChunk }): Promise<TaskResponse>;
+  run(req: TaskRequest, ctx: { signal, onChunk }): Promise<BackendRunResult>;
+  countTokens?(text): Promise<number | undefined>;    // outside the timed region
   dispose(): Promise<void>;
 }
 ```
 
 - `availability()` maps every API's own vocabulary to one enum:
   `available | downloadable | downloading | unavailable` plus a reason.
-- `run()` receives a **task request**, not a raw prompt: `{ task: 'generate' |
-  'summarize' | 'write' | 'rewrite' | 'translate' | 'classify', input, system?,
-  options }`. A chat model can serve every task through a prompt template; a
+- `run()` receives a **task request**, not a raw prompt: `{ exampleId, task,
+  input, generation? }`, where `task.type` is `'generate' | 'summarize' |
+  'write' | 'rewrite' | 'translate' | 'classify' | 'extract'`. A chat model can serve every task through a prompt template; a
   task API (Summarizer, Translator) only serves its own. This is what lets one
   dataset run across a task API and general LLMs.
 - Adapters call `onChunk(text)` for each streamed **delta**. The runtime
@@ -136,7 +144,7 @@ interface LoadedBackend {
   gets identical timing semantics.
 - Adapters return token counts when the backend knows them (WebLLM usage,
   Transformers.js tokenizer, Prompt API `measureInputUsage`), and say so via
-  `tokenCountSource: 'exact' | 'chunks' | 'estimate'`, so throughput numbers
+  `tokenCountSource: 'reported' | 'tokenizer' | 'chunks'`, so throughput numbers
   are never silently compared across different definitions.
 - Adapters are thin and written against the official APIs. The Vercel AI SDK
   community provider (`@browser-ai/*`) is an allowed implementation detail for
@@ -153,19 +161,22 @@ interface RunFile {
   schemaVersion: 1;
   runId: string; startedAt: string; finishedAt: string;
   name?: string;               // config name
-  tool: { name: 'web-ai-evals'; version: string };   // '@web-ai-evals/runner' before 0.1.0
+  tool: { name: 'web-ai-evals'; version: string };   // '@web-ai-evals/runner' in the first run files
   host: { platform; release; arch; cpuModel?; cores; memoryBytes };
   cells: CellResult[];         // one per dataset × backend × browser
   notes?: string[];
 }
 
 interface CellResult {
+  key: string;                 // `${dataset.id}/${backend.id}/${browser id}`
   dataset: DatasetRef;         // id, path, sha256 of contents, example count
+  task: TaskDefinition;
   backend: BackendSpec;
   environment: Environment;    // captured in the page + by the runner
   load: LoadReport;            // availability before, download, cold start ms
   results: ExampleResult[];
   summary: CellSummary;        // aggregate scores and latency percentiles
+  scorers: string[];           // in order; the first is the primary metric
 }
 
 interface ExampleResult {
@@ -176,12 +187,12 @@ interface ExampleResult {
   output?: string; error?: string; attempts: number;
   timings: { ttftMs?; totalMs; outputTokens?; tokensPerSecond?;
              tokenCountSource? };
-  memory?: { jsHeapUsedBytes?; };
+  memory?: { jsHeapUsedBytes?; jsHeapTotalBytes? };
   scores: Record<string, number>;  // scorer name → 0..1 (or metric value)
 }
 
 interface Environment {
-  browser: { name; channel; version; userAgent; headless };
+  browser: { id; name; channel; version; userAgent; headless };
   os: { platform; release; arch };
   hardware: { cpuModel?; cores; memoryBytes; deviceMemoryGb? };
   gpu?: { vendor; architecture; device; description; isFallbackAdapter? };
@@ -197,7 +208,7 @@ stored run with a new scorer never requires the browser again.
 
 JSONL, one example per line: `{ "id", "input", "expected"?, "meta"? }`, where
 `input` is a string or `{ text, context?, sourceLanguage?, targetLanguage?,
-labels? }`. The task type and prompt template live in the suite config, not in
+labels?, schema? }`. The task type and prompt template live in the suite config, not in
 the data, so the same data can drive a Summarizer and a chat model.
 
 ## Consequences

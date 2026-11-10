@@ -23,7 +23,6 @@ type PageLoadReport = Omit<LoadReport, 'availabilityBefore' | 'downloaded' | 'co
 let loaded: { spec: BackendSpec; backend: LoadedBackend } | undefined;
 let armed: { spec: BackendSpec; task: TaskDefinition } | undefined;
 let pendingLoad: Promise<PageLoadReport> | undefined;
-let current: AbortController | undefined;
 
 const log = (msg: string) => {
   const el = document.getElementById('log');
@@ -104,23 +103,9 @@ function sampleMemory(): MemorySample | undefined {
   return m ? { jsHeapUsedBytes: m.usedJSHeapSize, jsHeapTotalBytes: m.totalJSHeapSize } : undefined;
 }
 
-async function measureMemory(): Promise<MemorySample | undefined> {
-  const base = sampleMemory();
-  const fn = (performance as unknown as { measureUserAgentSpecificMemory?: () => Promise<{ bytes: number }> })
-    .measureUserAgentSpecificMemory;
-  if (!crossOriginIsolated || typeof fn !== 'function') return base;
-  try {
-    const res = await fn.call(performance);
-    return { ...base, uaSpecificBytes: res.bytes };
-  } catch {
-    return base;
-  }
-}
-
 async function run(request: TaskRequest): Promise<TaskResponse> {
   if (!loaded) return { status: 'error', error: 'no backend loaded', timings: { totalMs: 0 } };
   const controller = new AbortController();
-  current = controller;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let timedOut = false;
   if (request.timeoutMs) {
@@ -193,13 +178,7 @@ async function run(request: TaskRequest): Promise<TaskResponse> {
       timings: { totalMs: performance.now() - t0, ttftMs: first !== undefined ? first - t0 : undefined, chunks },
       memory: sampleMemory(),
     };
-  } finally {
-    if (current === controller) current = undefined;
   }
-}
-
-function abort(): void {
-  current?.abort(new DOMException('aborted by driver', 'AbortError'));
 }
 
 async function unload(): Promise<void> {
@@ -217,9 +196,7 @@ const api = {
   armLoad,
   awaitLoad,
   run,
-  abort,
   unload,
-  measureMemory,
 };
 
 export type WaeApi = typeof api;

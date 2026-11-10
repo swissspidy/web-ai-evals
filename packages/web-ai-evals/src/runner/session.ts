@@ -318,9 +318,7 @@ declare global {
       armLoad(spec: BackendSpec, task: TaskDefinition): void;
       awaitLoad(): Promise<PageLoadReport>;
       run(request: TaskRequest): Promise<TaskResponse>;
-      abort(): void;
       unload(): Promise<void>;
-      measureMemory(): Promise<unknown>;
     };
   }
 }

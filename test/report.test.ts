@@ -185,5 +185,8 @@ describe('changed outputs', () => {
     };
     const md = renderDiffMarkdown(diffRuns(run('a', [twice('positive', 1)]), run('b', [twice('negative', 0)])));
     expect(md).toContain('outputs changed: 1/1');
+    // A cell whose outputs changed is listed even when no score moved.
+    const same = renderDiffMarkdown(diffRuns(run('a', [twice('positive', 1)]), run('b', [twice('Positive!', 1)])));
+    expect(same).toContain('outputs changed: 1/1');
   });
 });

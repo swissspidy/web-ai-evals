@@ -45,6 +45,8 @@ const SUITES = {
 };
 
 const run = runs[0];
+// Share of translations that contain the reference. Runs before the scorer was renamed call it `exact`.
+const containsRef = (c) => c.summary.scores.contains ?? c.summary.scores.exact;
 const num = (v) => (Number.isFinite(Number(v)) ? String(Number(v)) : '?');
 const GPU_BACKENDS = ['phi-4-mini', 'gemma4-builtin', 'gemma3-1b-webllm', 'gemma3-1b-tjs-webgpu'];
 const gpuMeasured = cells.some((c) => GPU_BACKENDS.includes(c.backend.id) && c.load.status === 'ok' && c.summary.ok > 0);
@@ -140,7 +142,7 @@ function suiteSection(id) {
   const rows = ran
     .map((c) => {
       const s = c.summary;
-      const extra = id === 'summarization' ? `${s.scores.words?.toFixed(0)} words` : id === 'extraction' ? `${(s.scores.jsonSchema * 100).toFixed(0)}% schema-valid` : id === 'sentiment' ? `macro-F1 ${s.aggregates['accuracy.macroF1']?.toFixed(3)}` : `${(s.scores.exact * 100).toFixed(0)}% contain the reference`;
+      const extra = id === 'summarization' ? `${s.scores.words?.toFixed(0)} words` : id === 'extraction' ? `${(s.scores.jsonSchema * 100).toFixed(0)}% schema-valid` : id === 'sentiment' ? `macro-F1 ${s.aggregates['accuracy.macroF1']?.toFixed(3)}` : `${(containsRef(c) * 100).toFixed(0)}% contain the reference`;
       return `<tr><td>${esc(NAMES[c.backend.id]?.[0] ?? c.backend.id)} <small>${esc(NAMES[c.backend.id]?.[1] ?? '')}</small>${where(c)}${size(c)}</td><td class="n">${s.scores[meta.metric].toFixed(3)}</td><td class="n">${esc(extra)}</td><td class="n">${sec(s.ttftMs?.p50)}</td><td class="n">${sec(lat(c))}</td><td class="n">${s.tokensPerSecond ? s.tokensPerSecond.p50.toFixed(1) : '—'}</td><td class="n">${num(s.ok)}/${num(s.total)}</td></tr>`;
     })
     .join('');
@@ -423,7 +425,7 @@ pre { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6p
   ${s.nanoSent && s.qwenSent ? `<li><span><strong>On CPU, Gemini Nano matches or beats a 0.5B in-page model on every suite</strong>: sentiment accuracy ${f3(s.nanoSent, 'accuracy')} vs ${f3(s.qwenSent, 'accuracy')}, extraction field accuracy ${f3(s.nanoExt, 'fields')} vs ${f3(s.qwenExt, 'fields')}${s.nanoTr && s.qwenTr ? `, translation chrF ${f3(s.nanoTr, 'chrF')} vs ${f3(s.qwenTr, 'chrF')}` : ''}.</span></li>
   <li><span><strong>It is also faster</strong>. Median time to first token ${sec(s.nanoSent?.summary.ttftMs?.p50)} vs ${sec(s.qwenSent?.summary.ttftMs?.p50)} on sentiment; a summary takes ${sec(lat(s.nanoSum))} vs ${sec(lat(s.qwenSum))}. Chrome's native CPU inference outruns ONNX Runtime Web's Wasm backend by a wide margin.</span></li>` : ''}
   ${s.tldr && s.nanoSum ? `<li><span><strong>Chrome's Summarizer API ignores <code>format: "plain-text"</code> on this build, and misbehaves with it.</strong> In tl;dr mode it returned a Markdown news article every time (${s.tldr?.results.filter((r) => r.output?.startsWith('#')).length ?? 0} of 12), averaging ${s.tldr?.summary.scores.words.toFixed(0)} words for ~100-word inputs, with invented placeholders such as “[Region Name]”. In key-points mode, ${s.kp ? s.kp.results.filter((r) => { const l = (r.output ?? '').split('\n').filter(Boolean); return l.filter((x) => x.trim().endsWith('?')).length > l.length / 2; }).length : 0} of 12 answers were bullet lists of <em>questions about</em> the article. Key points in Markdown format, the API default, looked right in a spot check. The Prompt API with a plain instruction scores ROUGE-L ${f3(s.nanoSum, 'rougeL')} against ${f3(s.tldr, 'rougeL')} for the Summarizer.</span></li>` : ''}
-  ${s.tr && s.nanoTr ? `<li><span><strong>Chrome's Translator API matches Gemini Nano on translation at a fraction of the latency</strong>: chrF ${f3(s.tr, 'chrF')} vs ${f3(s.nanoTr, 'chrF')}, with the exact reference phrasing in ${Math.round(s.tr.summary.scores.exact * 100)}% vs ${Math.round(s.nanoTr.summary.scores.exact * 100)}% of sentences, at ${sec(lat(s.tr))} vs ${sec(lat(s.nanoTr))} per sentence. On first use it fails until Chrome has installed its translation runtime and language pack, with errors that don't say so; the runner retries until the install finishes.</span></li>` : ''}
+  ${s.tr && s.nanoTr ? `<li><span><strong>Chrome's Translator API matches Gemini Nano on translation at a fraction of the latency</strong>: chrF ${f3(s.tr, 'chrF')} vs ${f3(s.nanoTr, 'chrF')}, with the exact reference phrasing in ${Math.round(containsRef(s.tr) * 100)}% vs ${Math.round(containsRef(s.nanoTr) * 100)}% of sentences, at ${sec(lat(s.tr))} vs ${sec(lat(s.nanoTr))} per sentence. On first use it fails until Chrome has installed its translation runtime and language pack, with errors that don't say so; the runner retries until the install finishes.</span></li>` : ''}
   <li><span><strong>Gemma 3's q4 ONNX builds don't run on Transformers.js Wasm</strong> (ONNX Runtime Web lacks <code>GatherBlockQuantized</code> on Wasm), and WebLLM on a software WebGPU adapter loses the device. Browser AI on machines without a GPU is, in practice, built-in AI or a small model on Wasm.</span></li>
 </ol>
 

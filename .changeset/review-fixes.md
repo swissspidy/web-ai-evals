@@ -10,3 +10,7 @@ Fixes from a full review:
 - `classification()` counts labels that differ only in case as one class in macro-F1; `regex()` works with global patterns; Transformers.js backends honour `generation.topP`.
 - Diffs count changed outputs against the examples compared rather than all repeats, and the nightly channel comparison is always headed with both browser ids.
 - `DEFAULT_PORT` and `defaultProfilesDir()` are exported.
+- The promptfoo provider relaunches a browser that died between calls instead of failing every later test.
+- Markdown diffs list a cell whose outputs changed even when no score moved.
+- `llmJudge()` defaults to `claude-haiku-5-5` for the Anthropic provider.
+- Removed what nothing used or produced: `bootstrapCI`, the `'estimate'` token count source, `memory.uaSpecificBytes`, and the page runtime's `abort()` and `measureMemory()`.

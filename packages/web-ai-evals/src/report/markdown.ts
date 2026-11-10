@@ -29,7 +29,7 @@ export function renderDiffMarkdown(diff: RunDiff): string {
   else lines.push(`**${diff.flags.length} flagged change(s):**`, '', ...diff.flags.map((f) => `- ${f}`), '');
   for (const c of diff.cells) {
     const changed = c.scores.filter((s) => s.delta !== 0);
-    if (!c.flags.length && !changed.length) continue;
+    if (!c.flags.length && !changed.length && !c.changedOutputs.length) continue;
     const b = c.before.environment;
     const a = c.after.environment;
     lines.push(`### ${c.key}`, '',

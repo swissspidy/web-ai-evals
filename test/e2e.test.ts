@@ -90,3 +90,29 @@ describe('session load retries (mock backend)', () => {
     }
   });
 });
+
+describe('promptfoo provider (mock backend)', () => {
+  it('relaunches the browser when it died between calls', async () => {
+    const { default: Provider, closeAll } = await import('web-ai-evals/promptfoo');
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'wae-provider-'));
+    const provider = new Provider({
+      config: {
+        browser: { id: 'chromium', channel: 'chromium', headless: true, proxy: false },
+        backend: { kind: 'mock', options: { output: 'positive' } },
+        profilesDir: dir,
+        port: 0,
+        idleCloseMs: 60_000,
+      },
+    });
+    try {
+      expect((await provider.callApi('one')).output).toBe('positive');
+      const shared = (provider as unknown as { shared(): { session: Promise<{ browser: { context: { close(): Promise<void> } }; alive: boolean }> } }).shared();
+      const session = await shared.session;
+      await session.browser.context.close();
+      expect(session.alive).toBe(false);
+      expect(await provider.callApi('two')).toMatchObject({ output: 'positive', metadata: { loadMs: expect.any(Number) } });
+    } finally {
+      await closeAll();
+    }
+  });
+});

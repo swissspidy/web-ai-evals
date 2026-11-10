@@ -1,0 +1,15 @@
+{
+  // Typechecks the TypeScript outside the package: configs, example suites, examples and tests.
+  // They import the built package, so run `pnpm build` first.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "types": ["node"],
+    "lib": ["ES2023", "DOM"]
+  },
+  "include": ["*.config.ts", "examples/*.ts", "suites/*.ts", "test/*.ts"]
+}

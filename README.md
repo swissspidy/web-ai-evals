@@ -254,7 +254,8 @@ Chrome installed.
 ## CI
 
 - `.github/workflows/ci.yml` runs on GitHub-hosted runners. It covers
-  typecheck, publint, unit tests, and an end-to-end run with the mock backend in
+  typecheck (the package, and the configs, suites, examples and tests at the
+  root), publint, unit tests, and an end-to-end run with the mock backend in
   headless Chromium plus the Promptfoo provider.
 - `.github/workflows/nightly.yml` runs on a **self-hosted GPU machine** (a Mac
   mini is ideal). It runs a small suite on Chrome Stable, Beta and Canary and

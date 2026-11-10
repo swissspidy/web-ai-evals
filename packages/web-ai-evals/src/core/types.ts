@@ -121,7 +121,8 @@ export interface TaskRequest {
   timeoutMs?: number;
 }
 
-export type TokenCountSource = 'reported' | 'tokenizer' | 'chunks' | 'estimate';
+/** Counted by the backend itself, by re-tokenizing the output, or as the number of streamed chunks. */
+export type TokenCountSource = 'reported' | 'tokenizer' | 'chunks';
 
 export interface Timings {
   /** Time to first non-empty streamed chunk, from the request start. */
@@ -153,8 +154,6 @@ export interface TaskResponse {
 export interface MemorySample {
   jsHeapUsedBytes?: number;
   jsHeapTotalBytes?: number;
-  /** performance.measureUserAgentSpecificMemory() total, when cross-origin isolated. */
-  uaSpecificBytes?: number;
 }
 
 // ---------------------------------------------------------------------------
