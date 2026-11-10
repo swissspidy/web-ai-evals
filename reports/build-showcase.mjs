@@ -1,5 +1,5 @@
 // Builds the published showcase page from one or more run files.
-//   node reports/build-showcase.mjs results/<run>.json [more.json] > reports/showcase/index.html
+//   node reports/build-showcase.mjs results/<run>.json [more.json] > reports/<report>/index.html
 // Emits a standalone HTML document (for GitHub Pages). --fragment omits the
 // document wrapper, for hosts that add their own (e.g. a claude.ai Artifact).
 import { createHash } from 'node:crypto';
@@ -89,16 +89,6 @@ function machineLine(group) {
 if (!cells.some((c) => c.load.status === 'ok')) {
   process.stdout.write(wrap(`<title>Built-in AI vs In-Page Models</title><main style="max-width:680px;margin:0 auto;padding:40px 16px;font:16px/1.5 system-ui,sans-serif"><h1>No results</h1><p>No backend loaded in ${runs.length} run(s): ${esc(cells.map((c) => `${c.backend.id}: ${c.load.error ?? c.load.status}`).slice(0, 12).join('; '))}</p></main>`));
   process.exit(0);
-}
-
-function bars(rows, value, max, fmt, cls) {
-  return rows
-    .map((r) => {
-      const v = value(r);
-      const w = v === undefined ? 0 : Math.max(0.5, (v / max) * 100);
-      return `<div class="bar-row"><div class="bar-track"><div class="bar ${cls}" style="width:${w.toFixed(2)}%;background:var(--s${SLOT[r.backend.id] ?? 8})"></div></div><span class="bar-val">${fmt(v)}</span></div>`;
-    })
-    .join('');
 }
 
 /** Machine label under a row's name, only when the report merges several machines. */

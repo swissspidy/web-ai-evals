@@ -1,5 +1,5 @@
 import type { RunFile } from '../core/index.js';
-import type { RunDiff } from './diff.js';
+import { comparedOutputs, type RunDiff } from './diff.js';
 import { cellStatus, ms, modelLabel, num, score, signed } from './format.js';
 
 /** Escape a value for a Markdown table cell. */
@@ -33,7 +33,7 @@ export function renderDiffMarkdown(diff: RunDiff): string {
     const b = c.before.environment;
     const a = c.after.environment;
     lines.push(`### ${c.key}`, '',
-      `- browser: ${b.browser.version} → ${a.browser.version}; model: ${b.backend.model ?? '?'} ${b.backend.modelVersion ?? ''} → ${a.backend.model ?? '?'} ${a.backend.modelVersion ?? ''}`, ...c.scores.map((s) => `- ${s.metric}: ${score(s.before)} → ${score(s.after)} (${signed(s.delta)})`), `- outputs changed: ${c.changedOutputs.length}/${c.after.summary.total}`, '');
+      `- browser: ${b.browser.version} → ${a.browser.version}; model: ${b.backend.model ?? '?'} ${b.backend.modelVersion ?? ''} → ${a.backend.model ?? '?'} ${a.backend.modelVersion ?? ''}`, ...c.scores.map((s) => `- ${s.metric}: ${score(s.before)} → ${score(s.after)} (${signed(s.delta)})`), `- outputs changed: ${c.changedOutputs.length}/${comparedOutputs(c)}`, '');
   }
   return lines.join('\n');
 }

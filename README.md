@@ -308,7 +308,6 @@ Headline results:
 - Gemma 3 1B in the page (Transformers.js on WebGPU) is faster than Gemini
   Nano on the M4 Pro (89 ms vs 151 ms per sentiment example) but scores lower
   on sentiment (0.717 vs 0.940), extraction and translation.
-
 - The same Gemma 3 1B model on WebLLM scores below its Transformers.js run on
   every suite and returns empty answers for 46 of 60 summaries, with every
   window setting tried. Transformers.js gets the same prompt tokens and Gemma 2

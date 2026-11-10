@@ -1,5 +1,5 @@
 import type { CellResult, RunFile } from '../core/index.js';
-import type { RunDiff } from './diff.js';
+import { comparedOutputs, type RunDiff } from './diff.js';
 import { cellStatus, esc, ms, modelLabel, num, pct, score, signed } from './format.js';
 
 export interface ReportOptions {
@@ -344,7 +344,8 @@ ${c.scores.map((s) => `<tr><td>${esc(s.metric)}</td><td class="n">${score(s.befo
 ${c.latency.map((l) => `<tr><td>${esc(l.metric)}</td><td class="n">${l.metric.startsWith('tokens') ? num(l.before) : ms(l.before)}</td><td class="n">${l.metric.startsWith('tokens') ? num(l.after) : ms(l.after)}</td><td class="n ${l.flagged ? 'flag' : ''}">${l.ratio ? `×${l.ratio.toFixed(2)}` : '—'}</td></tr>`).join('')}
 </tbody></table></div>`;
     if (c.changedOutputs.length) {
-      body += `<details><summary>${c.changedOutputs.length} of ${c.after.summary.total} outputs changed (${pct(c.changedOutputs.length / Math.max(1, c.after.summary.total))})</summary><div class="scroll"><table><thead><tr><th>Example</th><th>Before</th><th>After</th></tr></thead><tbody>${c.changedOutputs
+      const compared = comparedOutputs(c);
+      body += `<details><summary>${c.changedOutputs.length} of ${compared} outputs changed (${pct(c.changedOutputs.length / Math.max(1, compared))})</summary><div class="scroll"><table><thead><tr><th>Example</th><th>Before</th><th>After</th></tr></thead><tbody>${c.changedOutputs
         .slice(0, 100)
         .map((o) => `<tr><td><code>${esc(o.exampleId)}</code></td><td class="out">${esc(o.before ?? '')}</td><td class="out">${esc(o.after ?? '')}</td></tr>`)
         .join('')}</tbody></table></div></details>`;

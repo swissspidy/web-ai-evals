@@ -1,7 +1,5 @@
 import type { BackendSpec, TaskDefinition, TaskResponse } from '../core/index.js';
-import { BrowserSession, type BrowserChannel, type BrowserConfig } from '../runner/index.js';
-import os from 'node:os';
-import path from 'node:path';
+import { BrowserSession, DEFAULT_PORT, defaultProfilesDir, type BrowserChannel, type BrowserConfig } from '../runner/index.js';
 
 /**
  * Promptfoo custom provider: sends each prompt through a backend running in a
@@ -85,8 +83,8 @@ export default class WebAIEvalsProvider {
       s = {
         session: BrowserSession.open({
           browser: this.browser,
-          profilesDir: this.config.profilesDir ?? path.join(os.homedir(), '.cache', 'web-ai-evals', 'profiles'),
-          port: this.config.port ?? 47831,
+          profilesDir: this.config.profilesDir ?? defaultProfilesDir(),
+          port: this.config.port ?? DEFAULT_PORT,
           log: process.env.WAE_DEBUG ? (m) => console.error(m) : undefined,
         }),
         queue: Promise.resolve(),

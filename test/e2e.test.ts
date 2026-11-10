@@ -18,7 +18,7 @@ describe('runner e2e (mock backend)', () => {
         name: 'e2e',
         browsers: [{ id: 'chromium', channel: 'chromium', headless: true, proxy: false }],
         backends: [
-          { id: 'mock', kind: 'mock', options: { delayMs: 1, failOn: ['s002'], hangOn: ['s003'] } },
+          { id: 'mock', kind: 'mock', options: { delayMs: 1, failOn: ['s002'], hangOn: ['s003'], stopOn: ['s005'] } },
           { id: 'off', kind: 'mock', options: { unavailable: true } },
         ],
         suites: [
@@ -51,10 +51,13 @@ describe('runner e2e (mock backend)', () => {
     expect(byId.s003).toMatchObject({ status: 'timeout', attempts: 2 });
     // Examples after a timeout still run.
     expect(byId.s004.status).toBe('ok');
+    // A backend that answers an abort by resolving with partial output still timed out.
+    expect(byId.s005).toMatchObject({ status: 'timeout', output: 'partial ' });
+    expect(byId.s006.status).toBe('ok');
     expect(mock.environment.browser.version).toMatch(/^\d+\./);
     expect(mock.environment.crossOriginIsolated).toBe(true);
     expect(mock.summary.errors).toBe(1);
-    expect(mock.summary.timeouts).toBe(1);
+    expect(mock.summary.timeouts).toBe(2);
 
     const off = run.cells[1];
     expect(off.load.status).toBe('unavailable');

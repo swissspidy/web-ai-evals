@@ -149,6 +149,9 @@ async function run(request: TaskRequest): Promise<TaskResponse> {
     });
     const end = performance.now();
     clearTimeout(timer);
+    // Backends that stop on abort instead of rejecting (an interrupted generation, a cancelled
+    // stream) resolve with whatever they had: that is a timeout, not a result.
+    if (controller.signal.aborted) throw controller.signal.reason;
     const output = res.output ?? streamed;
 
     // Token counting happens after the timed region.

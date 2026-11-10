@@ -173,3 +173,17 @@ describe('builtInModelVersions', () => {
     expect(await builtInModelVersions(await mkdtemp(path.join(os.tmpdir(), 'wae-empty-')))).toBeUndefined();
   });
 });
+
+describe('changed outputs', () => {
+  it('are counted against the examples compared, not every repeat', async () => {
+    const { renderDiffMarkdown } = await import('web-ai-evals/report');
+    const twice = (output: string, accuracy: number) => {
+      const c = cell('chrome', '154', 'v1', accuracy, 100, output);
+      c.results.push({ ...c.results[0], repeat: 2 });
+      c.summary.total = c.summary.ok = 2;
+      return c;
+    };
+    const md = renderDiffMarkdown(diffRuns(run('a', [twice('positive', 1)]), run('b', [twice('negative', 0)])));
+    expect(md).toContain('outputs changed: 1/1');
+  });
+});

@@ -1,4 +1,4 @@
-import type { RunFile } from '../core/index.js';
+import { SCHEMA_VERSION, type RunFile } from '../core/index.js';
 import { diffRuns, renderDiff, renderDiffMarkdown, renderMarkdown, renderReport, type DiffOptions, type RunDiff } from '../report/index.js';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -33,7 +33,7 @@ export async function latestRun(dir: string, name: string | undefined, exclude?:
     if (exclude && path.resolve(file) === path.resolve(exclude)) continue;
     try {
       const run = JSON.parse(await readFile(file, 'utf8')) as RunFile;
-      if (run.schemaVersion === 1 && run.name === name && run.cells.length) return { file, run };
+      if (run.schemaVersion === SCHEMA_VERSION && run.name === name && run.cells.length) return { file, run };
     } catch {
       /* skip unreadable files */
     }
@@ -58,7 +58,8 @@ export async function runNightly(config: ResolvedConfig, options: NightlyOptions
 
   const browsers = [...new Set(run.cells.map((c) => c.environment.browser.id))];
   const baseline = options.baseline ?? browsers[0];
-  const channels = browsers.filter((b) => b !== baseline).map((b) => diffRuns(run, run, { ...options.diff, browsers: { before: baseline, after: b } }));
+  const others = browsers.filter((b) => b !== baseline);
+  const channels = others.map((b) => diffRuns(run, run, { ...options.diff, browsers: { before: baseline, after: b } }));
 
   const md = [
     renderMarkdown([run]),
@@ -68,7 +69,7 @@ export async function runNightly(config: ResolvedConfig, options: NightlyOptions
     '',
     '## Channel comparison (informational)',
     '',
-    ...channels.map((d) => renderDiffMarkdown(d).replace(/^# .*$/m, `### ${baseline} vs ${d.cells[0]?.key.match(/→ ([^)]+)\)/)?.[1] ?? ''}`)),
+    ...channels.map((d, i) => renderDiffMarkdown(d).replace(/^# .*$/m, `### ${baseline} vs ${others[i]}`)),
   ].join('\n');
   await writeFile(file.replace(/\.json$/, '.md'), md);
   return { run, file, previous: prev?.file, drift, channels, markdown: md };

@@ -93,8 +93,9 @@ export interface TaskDefinition {
   type: TaskType;
   /**
    * Prompt template for general LLM backends. `{{text}}`, `{{context}}`,
-   * `{{labels}}`, `{{sourceLanguage}}`, `{{targetLanguage}}` and `{{schema}}`
-   * are replaced. Task APIs (Summarizer, Translator, ...) ignore it.
+   * `{{labels}}`, `{{sourceLanguage}}`, `{{targetLanguage}}`,
+   * `{{sourceLanguageName}}`, `{{targetLanguageName}}` and `{{schema}}` are
+   * replaced. Task APIs (Summarizer, Translator, ...) ignore it.
    */
   prompt?: string;
   /** System prompt for chat backends. */
@@ -130,8 +131,8 @@ export interface Timings {
   outputTokens?: number;
   inputTokens?: number;
   /**
-   * Decode throughput: outputTokens / (totalMs - ttftMs). Only set when both
-   * are known and the stream produced more than one chunk.
+   * Decode throughput after the first token: (outputTokens - 1) / (last chunk -
+   * first chunk). Only set when the stream produced more than one chunk.
    */
   tokensPerSecond?: number;
   tokenCountSource?: TokenCountSource;
@@ -314,7 +315,7 @@ export interface CellSummary {
   errors: number;
   timeouts: number;
   unavailable: number;
-  /** Mean of each per-example score over examples with status ok (errors count as 0 when `strict`). */
+  /** Mean of each per-example score over all attempted examples; errors and timeouts count as 0. */
   scores: Record<string, number>;
   /** Dataset-level metrics from scorer aggregates (e.g. macro F1). */
   aggregates: Record<string, number>;

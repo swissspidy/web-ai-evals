@@ -20,20 +20,23 @@ export function classification(opts: { name?: string; labels?: string[] } = {}):
       };
     },
     aggregate(items: AggregateItem[]) {
-      const labels = new Set<string>();
+      // Labels compare case-insensitively, so "Positive" and "positive" are one class.
+      const labels = new Map<string, string>();
+      const add = (label: string) => {
+        if (!labels.has(label.toLowerCase())) labels.set(label.toLowerCase(), label);
+      };
       const pairs: { gold: string; pred: string | undefined }[] = [];
       for (const item of items) {
         const gold = String(item.example.expected);
-        labels.add(gold);
+        add(gold);
         const ls = labelsFor(item);
-        ls.forEach((l) => labels.add(l));
+        ls.forEach(add);
         const pred = item.output === undefined ? undefined : ls.length ? matchLabel(item.output, ls) : item.output.trim();
         pairs.push({ gold: gold.toLowerCase(), pred: pred?.toLowerCase() });
       }
       const out: Record<string, number> = {};
       let f1Sum = 0;
-      for (const label of labels) {
-        const l = label.toLowerCase();
+      for (const [l, label] of labels) {
         const tp = pairs.filter((p) => p.pred === l && p.gold === l).length;
         const fp = pairs.filter((p) => p.pred === l && p.gold !== l).length;
         const fn = pairs.filter((p) => p.pred !== l && p.gold === l).length;
