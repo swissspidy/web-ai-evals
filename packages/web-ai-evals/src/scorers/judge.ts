@@ -24,7 +24,7 @@ If a REFERENCE is given, use it as a guide to correctness, not as the only accep
  */
 export function llmJudge(opts: JudgeOptions = {}): Scorer {
   const provider = opts.provider ?? 'anthropic';
-  const model = opts.model ?? (provider === 'anthropic' ? 'claude-haiku-5-5' : 'gpt-4.1-mini');
+  const model = opts.model ?? (provider === 'anthropic' ? 'claude-sonnet-5-5' : 'gpt-4.1-mini');
   const keyEnv = opts.apiKeyEnv ?? (provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY');
   return {
     name: opts.name ?? 'judge',

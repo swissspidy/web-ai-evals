@@ -12,5 +12,5 @@ Fixes from a full review:
 - `DEFAULT_PORT` and `defaultProfilesDir()` are exported.
 - The promptfoo provider relaunches a browser that died between calls instead of failing every later test.
 - Markdown diffs list a cell whose outputs changed even when no score moved.
-- `llmJudge()` defaults to `claude-haiku-5-5` for the Anthropic provider.
+- `llmJudge()` defaults to `claude-sonnet-5-5` for the Anthropic provider.
 - Removed what nothing used or produced: `bootstrapCI`, the `'estimate'` token count source, `memory.uaSpecificBytes`, and the page runtime's `abort()` and `measureMemory()`.
