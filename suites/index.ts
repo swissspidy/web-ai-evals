@@ -56,7 +56,7 @@ export const translation: SuiteConfig = {
   dataset: here('./translation/data.jsonl'),
   license: 'CC0-1.0',
   task: { type: 'translate', sourceLanguage: 'en', targetLanguage: 'de' },
-  scorers: [chrF(), contains({ name: 'exact' })],
+  scorers: [chrF(), contains()],
 };
 
 export const allSuites = [sentiment, summarization, extraction, translation];

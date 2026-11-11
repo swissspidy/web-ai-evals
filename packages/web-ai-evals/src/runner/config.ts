@@ -1,5 +1,6 @@
 import type { BackendSpec, TaskDefinition } from '../core/index.js';
 import type { Scorer } from '../scorers/index.js';
+import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -88,6 +89,14 @@ export interface ResolvedConfig extends EvalConfig {
   baseDir: string;
 }
 
+/** Fixed default port of the page runtime: a stable origin keeps in-page model caches valid. */
+export const DEFAULT_PORT = 47831;
+
+/** Default location of the persistent browser profiles. */
+export function defaultProfilesDir(): string {
+  return path.join(os.homedir(), '.cache', 'web-ai-evals', 'profiles');
+}
+
 export function defineConfig(config: EvalConfig): EvalConfig {
   return config;
 }
@@ -111,7 +120,6 @@ export function resolveConfig(config: EvalConfig, baseDir: string): ResolvedConf
     for (const id of s.backends ?? []) if (!backendIds.has(id)) throw new Error(`suite "${s.id}" references unknown backend "${id}"`);
     if (!s.scorers.length) throw new Error(`suite "${s.id}" needs at least one scorer`);
   }
-  const home = process.env.HOME ?? process.env.USERPROFILE ?? '.';
   const r = config.run ?? {};
   return {
     ...config,
@@ -124,8 +132,8 @@ export function resolveConfig(config: EvalConfig, baseDir: string): ResolvedConf
       repeats: r.repeats ?? 1,
       coldStarts: r.coldStarts ?? 0,
       warmup: r.warmup ?? 0,
-      port: r.port ?? 47831,
-      profilesDir: r.profilesDir ? path.resolve(baseDir, r.profilesDir) : path.join(home, '.cache', 'web-ai-evals', 'profiles'),
+      port: r.port ?? DEFAULT_PORT,
+      profilesDir: r.profilesDir ? path.resolve(baseDir, r.profilesDir) : defaultProfilesDir(),
       outDir: path.resolve(baseDir, r.outDir ?? 'results'),
     },
   };

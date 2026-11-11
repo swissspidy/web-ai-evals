@@ -9,3 +9,6 @@ allowBuilds:
   '@swc/core': false
   onnxruntime-node: false
   protobufjs: false
+
+# Refuse to install on a Node older than package.json's engines (24+).
+engineStrict: true

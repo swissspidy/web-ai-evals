@@ -7,7 +7,7 @@ Four suites, written for this project and released under CC0-1.0 (see
 |---|---|---|---|---|
 | `sentiment` | 300 | 140 | three-way classification of short reviews and statements | accuracy, macro-F1 |
 | `extraction` | 150 | 90 | restaurant booking message → JSON (`name`, `date`, `city`, `guests`) | field accuracy, schema validity |
-| `translation` | 200 | 80 | English → German | chrF, exact reference |
+| `translation` | 200 | 80 | English → German | chrF, contains the reference |
 | `summarization` | 60 | 12 | one-to-two sentence summary of a ~110-word news-style article | ROUGE-L, word count |
 
 Hard examples carry `"meta": {"difficulty": "hard"}`:

@@ -24,7 +24,7 @@ export interface RuntimeServer {
 
 /**
  * Serve the page runtime on 127.0.0.1 (a secure context). Cross-origin
- * isolation headers enable Wasm threads and measureUserAgentSpecificMemory().
+ * isolation headers enable Wasm threads (SharedArrayBuffer).
  * `credentialless` COEP still allows model downloads from Hugging Face / CDNs.
  */
 export async function startRuntimeServer(port: number, root = pageRuntimeDir): Promise<RuntimeServer> {

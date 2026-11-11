@@ -25,7 +25,10 @@ export function regex(pattern?: RegExp | string, opts: { name?: string } = {}): 
     score: ({ output, example }) => {
       const p = pattern ?? (example.meta?.pattern as string | undefined);
       if (!p) throw new Error('regex scorer needs a pattern or example.meta.pattern');
-      return (typeof p === 'string' ? new RegExp(p, 'i') : p).test(output) ? 1 : 0;
+      if (typeof p === 'string') return new RegExp(p, 'i').test(output) ? 1 : 0;
+      // A global or sticky RegExp keeps its position between calls.
+      p.lastIndex = 0;
+      return p.test(output) ? 1 : 0;
     },
   };
 }

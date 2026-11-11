@@ -1,7 +1,5 @@
 import type { BackendSpec, TaskDefinition, TaskResponse } from '../core/index.js';
-import { BrowserSession, type BrowserChannel, type BrowserConfig } from '../runner/index.js';
-import os from 'node:os';
-import path from 'node:path';
+import { BrowserSession, DEFAULT_PORT, defaultProfilesDir, type BrowserChannel, type BrowserConfig } from '../runner/index.js';
 
 /**
  * Promptfoo custom provider: sends each prompt through a backend running in a
@@ -17,7 +15,8 @@ import path from 'node:path';
  *
  * One browser session is shared by every provider instance with the same
  * launch options; calls are serialized (one GPU job at a time) and the browser
- * closes after `idleCloseMs` without calls so promptfoo can exit.
+ * closes after `idleCloseMs` without calls so promptfoo can exit. A browser that
+ * dies between calls is relaunched on the next one.
  */
 export interface ProviderConfig {
   browser?: BrowserConfig | BrowserChannel;
@@ -42,7 +41,8 @@ interface ProviderResponse {
 }
 
 interface SharedSession {
-  session: Promise<BrowserSession>;
+  /** Undefined after a failed launch: the next call tries again. */
+  session?: Promise<BrowserSession>;
   queue: Promise<unknown>;
   loadedKey?: string;
   idle?: NodeJS.Timeout;
@@ -82,19 +82,19 @@ export default class WebAIEvalsProvider {
   private shared(): SharedSession {
     let s = sessions.get(this.sessionKey);
     if (!s) {
-      s = {
-        session: BrowserSession.open({
-          browser: this.browser,
-          profilesDir: this.config.profilesDir ?? path.join(os.homedir(), '.cache', 'web-ai-evals', 'profiles'),
-          port: this.config.port ?? 47831,
-          log: process.env.WAE_DEBUG ? (m) => console.error(m) : undefined,
-        }),
-        queue: Promise.resolve(),
-        users: 0,
-      };
+      s = { session: this.open(), queue: Promise.resolve(), users: 0 };
       sessions.set(this.sessionKey, s);
     }
     return s;
+  }
+
+  private open(): Promise<BrowserSession> {
+    return BrowserSession.open({
+      browser: this.browser,
+      profilesDir: this.config.profilesDir ?? defaultProfilesDir(),
+      port: this.config.port ?? DEFAULT_PORT,
+      log: process.env.WAE_DEBUG ? (m) => console.error(m) : undefined,
+    });
   }
 
   async callApi(prompt: string): Promise<ProviderResponse> {
@@ -116,24 +116,41 @@ export default class WebAIEvalsProvider {
   private async runSerialized(shared: SharedSession, prompt: string): Promise<ProviderResponse> {
     let session: BrowserSession;
     try {
-      session = await shared.session;
+      // Calls are serialized, so a call queued behind a failed launch retries it here, one at a time.
+      session = await (shared.session ??= this.open());
+      // The browser died (crash, closed window) since the last call: relaunch it once, so one
+      // crash does not fail every remaining test.
+      if (!session.alive) {
+        await session.close();
+        shared.loadedKey = undefined;
+        shared.session = this.open();
+        session = await shared.session;
+      }
     } catch (err) {
-      sessions.delete(this.sessionKey);
+      shared.session = undefined;
+      shared.loadedKey = undefined;
       return { error: `could not launch ${this.browser.id}: ${(err as Error).message.split('\n')[0]}` };
     }
     const key = JSON.stringify([this.spec, this.task]);
     let loadMs: number | undefined;
-    if (shared.loadedKey !== key) {
+    let res: TaskResponse & { attempts: number };
+    try {
+      if (shared.loadedKey !== key) {
+        shared.loadedKey = undefined;
+        const load = await session.load(this.spec, this.task, { timeoutMs: this.config.loadTimeoutMs });
+        if (load.status !== 'ok') return { error: `${this.spec.id} ${load.status}: ${load.error ?? load.availabilityBefore.reason ?? ''}` };
+        shared.loadedKey = key;
+        loadMs = load.loadMs;
+      }
+      res = await session.run(
+        { exampleId: 'promptfoo', task: this.task, input: { text: prompt }, generation: this.spec.generation },
+        { timeoutMs: this.config.timeoutMs ?? 120_000, retries: this.config.retries ?? 0 },
+      );
+    } catch (err) {
+      // e.g. the browser went away mid-call; the next call relaunches it.
       shared.loadedKey = undefined;
-      const load = await session.load(this.spec, this.task, { timeoutMs: this.config.loadTimeoutMs });
-      if (load.status !== 'ok') return { error: `${this.spec.id} ${load.status}: ${load.error ?? load.availabilityBefore.reason ?? ''}` };
-      shared.loadedKey = key;
-      loadMs = load.loadMs;
+      return { error: `${this.spec.id}: ${(err as Error).message.split('\n')[0]}` };
     }
-    const res: TaskResponse & { attempts: number } = await session.run(
-      { exampleId: 'promptfoo', task: this.task, input: { text: prompt }, generation: this.spec.generation },
-      { timeoutMs: this.config.timeoutMs ?? 120_000, retries: this.config.retries ?? 0 },
-    );
     const t = res.timings;
     const metadata = {
       backend: this.spec.id,
@@ -159,7 +176,7 @@ async function closeSession(id: string): Promise<void> {
   const s = sessions.get(id);
   if (!s || s.users > 0) return;
   sessions.delete(id);
-  await (await s.session.catch(() => undefined))?.close();
+  await (await s.session?.catch(() => undefined))?.close();
 }
 
 /** Close every browser opened by the provider (for programmatic use). */

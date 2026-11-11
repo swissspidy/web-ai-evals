@@ -26,21 +26,3 @@ export function distribution(values: Array<number | undefined>): Distribution | 
 export function mean(values: number[]): number {
   return values.length ? values.reduce((a, b) => a + b, 0) / values.length : NaN;
 }
-
-/** Bootstrap 95% confidence interval of the mean (deterministic seed). */
-export function bootstrapCI(values: number[], iterations = 1000, seed = 1): [number, number] {
-  if (values.length < 2) return [NaN, NaN];
-  let s = seed >>> 0;
-  const rand = () => {
-    s = (s * 1664525 + 1013904223) >>> 0;
-    return s / 2 ** 32;
-  };
-  const means: number[] = [];
-  for (let i = 0; i < iterations; i++) {
-    let sum = 0;
-    for (let j = 0; j < values.length; j++) sum += values[Math.floor(rand() * values.length)];
-    means.push(sum / values.length);
-  }
-  means.sort((a, b) => a - b);
-  return [quantile(means, 0.025), quantile(means, 0.975)];
-}

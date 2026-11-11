@@ -99,16 +99,16 @@ export async function runEvals(config: ResolvedConfig, options: RunEvalsOptions 
   const run: RunFile = options.resume
     ? { ...options.resume.run, cells: options.resume.run.cells.filter(reusable) }
     : {
-    schemaVersion: SCHEMA_VERSION,
-    runId,
-    name: config.name,
-    startedAt: startedAt.toISOString(),
-    finishedAt: startedAt.toISOString(),
-    tool: TOOL,
-    host: hostInfo(),
-    cells: [],
-    notes: config.notes,
-  };
+        schemaVersion: SCHEMA_VERSION,
+        runId,
+        name: config.name,
+        startedAt: startedAt.toISOString(),
+        finishedAt: startedAt.toISOString(),
+        tool: TOOL,
+        host: hostInfo(),
+        cells: [],
+        notes: config.notes,
+      };
   const done = new Set(run.cells.map((c) => c.key));
   if (options.resume) log(`resuming ${run.runId}: ${done.size} cells kept`);
   await mkdir(config.run.outDir, { recursive: true });
@@ -275,12 +275,19 @@ export async function runCell(
 
 /** Re-score a stored run with the scorers from a config (no browser needed). */
 export async function rescoreRun(run: RunFile, config: ResolvedConfig): Promise<RunFile> {
+  // A suite's dataset is read once, however many cells (backends, browsers) used it.
+  const suites = new Map<string, LoadedSuite>();
   for (const cell of run.cells) {
     const suite = config.suites.find((s) => s.id === cell.dataset.id);
     if (!suite) continue;
-    const loaded = await loadSuite(suite, config.baseDir);
+    let loaded = suites.get(suite.id);
+    if (!loaded) {
+      // Not limited: the run may have used a different --limit than the config's.
+      loaded = await loadSuite({ ...suite, limit: undefined }, config.baseDir);
+      suites.set(suite.id, loaded);
+    }
     if (loaded.ref.sha256 !== cell.dataset.sha256) {
-      console.error(`warning: dataset ${suite.id} changed since the run (sha256 differs); rescoring by example id`);
+      console.error(`warning: dataset ${suite.id} changed since the run (sha256 differs); rescoring ${cell.key} by example id`);
     }
     await scoreResults(cell.results, loaded.byId, cell.task, suite.scorers);
     cell.summary = summarize(cell.results, loaded.byId, cell.task, suite.scorers);

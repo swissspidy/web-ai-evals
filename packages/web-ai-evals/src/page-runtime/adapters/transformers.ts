@@ -1,6 +1,5 @@
 import { matchLabel, renderPrompt } from '../../core/index.js';
 import type { BackendAdapter, LoadedBackend } from './types.js';
-import { errorMessage } from './types.js';
 
 /**
  * Transformers.js (ONNX Runtime Web) on WebGPU or Wasm.
@@ -111,6 +110,7 @@ export const transformersAdapter: BackendAdapter = {
           do_sample: (gen.temperature ?? 0) > 0,
           temperature: gen.temperature,
           top_k: gen.topK,
+          top_p: gen.topP,
           streamer,
           stopping_criteria: stopping,
         };
@@ -147,5 +147,3 @@ export const transformersAdapter: BackendAdapter = {
     };
   },
 };
-
-export { errorMessage };

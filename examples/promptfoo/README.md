@@ -37,8 +37,11 @@ providers:
 
 ## Behaviour
 
-- **One browser per browser id.** Calls are serialized, so there is one GPU
-  job at a time and latency isn't distorted by promptfoo's concurrency.
+- **One browser per browser config.** Providers whose `browser` options are
+  identical share one browser; give providers with different options different
+  `id`s, because two browsers can't open the same profile. Calls are
+  serialized, so there is one GPU job at a time and latency isn't distorted by
+  promptfoo's concurrency.
 - **Response fields:** `latencyMs` is the in-page wall time, so the `latency`
   assertion measures the model, not the RPC. `tokenUsage.completion` is filled
   in where the backend knows it.

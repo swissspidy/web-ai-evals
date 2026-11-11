@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Example, TaskDefinition } from 'web-ai-evals';
-import { chrF, classification, contains, exactMatch, jsonFieldMatch, jsonSchema, jsonValid, rougeL } from 'web-ai-evals/scorers';
+import { chrF, classification, contains, exactMatch, jsonFieldMatch, jsonSchema, jsonValid, regex, rougeL } from 'web-ai-evals/scorers';
 
 const task: TaskDefinition = { type: 'generate' };
 const ctx = (output: string, expected: unknown, extra: Partial<Example> = {}) => {
@@ -59,5 +59,35 @@ describe('classification', () => {
     // a: P=1 R=.5 F1=.667; b: P=.5 R=.5 F1=.5
     expect(agg.macroF1).toBeCloseTo((2 / 3 + 0.5) / 2);
     expect(agg.invalidLabelRate).toBeCloseTo(0.25);
+  });
+});
+
+describe('review fixes', () => {
+  it('regex scorer gives the same answer on every call with a global pattern', async () => {
+    const scorer = regex(/berlin/gi);
+    expect(await val(scorer.score(ctx('Berlin', undefined)))).toBe(1);
+    expect(await val(scorer.score(ctx('Berlin', undefined)))).toBe(1);
+  });
+  it('counts labels that differ only in case as one class', () => {
+    const scorer = classification({ labels: ['positive', 'negative'] });
+    const items = [
+      { gold: 'Positive', out: 'positive' },
+      { gold: 'negative', out: 'negative' },
+    ].map(({ gold, out }, i) => ({ example: { id: String(i), input: 'x', expected: gold }, input: { text: 'x' }, output: out, score: undefined }));
+    const agg = scorer.aggregate!(items);
+    expect(Object.keys(agg).filter((k) => k.startsWith('f1:'))).toHaveLength(2);
+    expect(agg.macroF1).toBe(1);
+  });
+});
+
+describe('llmJudge request', () => {
+  it('leaves the default model room to think and asks for low effort; other models get no effort', async () => {
+    const { anthropicBody } = await import('web-ai-evals/scorers');
+    expect(anthropicBody('claude-sonnet-5-5', 'p', {})).toMatchObject({ max_tokens: 4096, output_config: { effort: 'low' } });
+    expect(anthropicBody('claude-haiku-4-5', 'p', { maxTokens: 300 })).toEqual({
+      model: 'claude-haiku-4-5',
+      max_tokens: 300,
+      messages: [{ role: 'user', content: 'p' }],
+    });
   });
 });

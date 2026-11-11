@@ -254,7 +254,8 @@ Chrome installed.
 ## CI
 
 - `.github/workflows/ci.yml` runs on GitHub-hosted runners. It covers
-  typecheck, publint, unit tests, and an end-to-end run with the mock backend in
+  typecheck (the package, and the configs, suites, examples and tests at the
+  root), publint, unit tests, and an end-to-end run with the mock backend in
   headless Chromium plus the Promptfoo provider.
 - `.github/workflows/nightly.yml` runs on a **self-hosted GPU machine** (a Mac
   mini is ideal). It runs a small suite on Chrome Stable, Beta and Canary and
@@ -308,7 +309,6 @@ Headline results:
 - Gemma 3 1B in the page (Transformers.js on WebGPU) is faster than Gemini
   Nano on the M4 Pro (89 ms vs 151 ms per sentiment example) but scores lower
   on sentiment (0.717 vs 0.940), extraction and translation.
-
 - The same Gemma 3 1B model on WebLLM scores below its Transformers.js run on
   every suite and returns empty answers for 46 of 60 summaries, with every
   window setting tried. Transformers.js gets the same prompt tokens and Gemma 2

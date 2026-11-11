@@ -12,7 +12,7 @@ import type {
 } from '../core/index.js';
 import type { Page } from 'playwright';
 import { launchBrowser, type LaunchedBrowser } from './browsers.js';
-import type { BrowserConfig } from './config.js';
+import { DEFAULT_PORT, type BrowserConfig } from './config.js';
 import { builtInModelVersions, dirBytes, hostInfo } from './host.js';
 import { startRuntimeServer, type RuntimeServer } from './server.js';
 
@@ -74,7 +74,7 @@ export class BrowserSession {
     let server: RuntimeServer | undefined;
     let url = options.serverUrl;
     if (!url) {
-      server = await startRuntimeServer(options.port ?? 47831);
+      server = await startRuntimeServer(options.port ?? DEFAULT_PORT);
       url = server.url;
     }
     let browser: LaunchedBrowser;
@@ -318,9 +318,7 @@ declare global {
       armLoad(spec: BackendSpec, task: TaskDefinition): void;
       awaitLoad(): Promise<PageLoadReport>;
       run(request: TaskRequest): Promise<TaskResponse>;
-      abort(): void;
       unload(): Promise<void>;
-      measureMemory(): Promise<unknown>;
     };
   }
 }

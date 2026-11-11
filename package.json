@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "pnpm -r run build",
-    "typecheck": "pnpm -r run typecheck",
+    "typecheck": "pnpm -r run typecheck && tsc -p tsconfig.json",
     "test": "vitest run",
     "wae": "web-ai-evals",
     "changeset": "changeset",

@@ -55,7 +55,10 @@ export interface DiffOptions {
   latencyRatio?: number;
   /** Compare a browser in the "before" run with a different browser in "after" (e.g. chrome vs chrome-canary). */
   browsers?: { before: string; after: string };
-  /** Flag environment changes to these fields. Default: model version, model, browser version. */
+  /**
+   * Flag environment changes to these fields. Default: model, model version, built-in
+   * components and dataset hash. Browser version changes are recorded but not flagged.
+   */
   flagFields?: string[];
 }
 
@@ -178,6 +181,12 @@ function diffCell(
     .map((r) => ({ exampleId: r.exampleId, before: outA.get(r.exampleId), after: r.output }));
 
   return { key, before, after, envChanges, scores, latency, statusChanged, changedOutputs, flags };
+}
+
+/** How many outputs a cell diff compared: `changedOutputs` only looks at the first repeat. */
+export function comparedOutputs(cell: CellDiff): number {
+  const before = new Set(cell.before.results.filter((r) => r.repeat === 1).map((r) => r.exampleId));
+  return cell.after.results.filter((r) => r.repeat === 1 && before.has(r.exampleId)).length;
 }
 
 function fmt(v: unknown): string {

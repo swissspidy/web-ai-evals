@@ -3,7 +3,7 @@ import type { RunFile } from '../core/index.js';
 import { diffRuns, renderDiff, renderDiffMarkdown, renderMarkdown, renderReport } from '../report/index.js';
 import { readFile, writeFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
-import { loadConfig } from './config.js';
+import { DEFAULT_PORT, loadConfig } from './config.js';
 import { builtInDiagnostics } from './diagnostics.js';
 import { runNightly } from './nightly.js';
 import { rescoreRun, runEvals } from './run.js';
@@ -21,15 +21,16 @@ Usage:
   web-ai-evals diff <before.json> [after.json] [--browsers before:after] [--out diff.html]
                     [--score-threshold 0.05] [--latency-ratio 1.5] [--markdown] [--fail-on-flags]
   web-ai-evals rescore --config evals.config.ts <run.json> [--out run.json]
-  web-ai-evals nightly --config nightly.config.ts [--history dir] [--fail-on-flags]
-  web-ai-evals serve [--port 47831]
+  web-ai-evals nightly --config nightly.config.ts [--history dir] [--score-threshold 0.05] [--latency-ratio 1.5]
+                    [--fail-on-flags]
+  web-ai-evals serve [--port ${DEFAULT_PORT}]
   web-ai-evals --version
 
 run      Runs every suite × backend × browser in the config and writes results/<runId>.json
          plus an HTML report next to it.
 doctor   Launches each browser and prints its environment and each backend's availability.
-diff     Compares two runs (or two browsers inside one run) and flags model/browser
-         version changes, score changes and latency changes. --fail-on-flags exits 2.
+diff     Compares two runs (or two browsers inside one run) and flags model version
+         changes, score changes and latency changes. --fail-on-flags exits 2.
 nightly  Runs the config, diffs it against the previous run with the same name in the
          history directory (drift) and across browser channels. --fail-on-flags exits 2
          when drift is flagged.
@@ -38,6 +39,15 @@ rescore  Re-applies the config's scorers to a stored run without a browser.
 
 const list = (v: unknown) => (typeof v === 'string' && v ? v.split(',').map((s) => s.trim()).filter(Boolean) : undefined);
 const readRun = async (f: string) => JSON.parse(await readFile(f, 'utf8')) as RunFile;
+/** `run.json` → `run.html`. A file without the .json extension gets the new one appended, never replaced. */
+const sibling = (file: string, ext: string) => (file.endsWith('.json') ? file.slice(0, -'.json'.length) : file) + ext;
+/** A numeric option; anything that isn't a number is an error instead of a silent NaN. */
+const numeric = (name: string, v: string | undefined, min = -Infinity): number | undefined => {
+  if (v === undefined) return undefined;
+  const n = Number(v);
+  if (v.trim() === '' || !Number.isFinite(n) || n < min) throw new Error(`--${name} needs a number${min > -Infinity ? ` of at least ${min}` : ''}, got "${v}"`);
+  return n;
+};
 
 async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
@@ -78,11 +88,11 @@ async function main(argv: string[]): Promise<number> {
       const resume = values.resume ? { run: await readRun(values.resume), file: values.resume } : undefined;
       const { run, file } = await runEvals(config, {
         resume,
-        filter: { browsers: list(values.browsers), backends: list(values.backends), suites: list(values.suites), limit: values.limit ? Number(values.limit) : undefined },
+        filter: { browsers: list(values.browsers), backends: list(values.backends), suites: list(values.suites), limit: numeric('limit', values.limit, 0) },
       });
       console.error(`results: ${file}`);
       if (!values['no-report']) {
-        const html = file.replace(/\.json$/, '.html');
+        const html = sibling(file, '.html');
         await writeFile(html, renderReport([run]));
         console.error(`report:  ${html}`);
       }
@@ -94,7 +104,8 @@ async function main(argv: string[]): Promise<number> {
       const config = await loadConfig(values.config ?? 'evals.config.ts');
       const server = await startRuntimeServer(config.run.port);
       try {
-        for (const browser of config.browsers.filter((b) => !list(values.browsers) || list(values.browsers)!.includes(b.id))) {
+        const only = list(values.browsers);
+        for (const browser of config.browsers.filter((b) => !only || only.includes(b.id))) {
           let session: BrowserSession;
           try {
             session = await BrowserSession.open({ browser, profilesDir: config.run.profilesDir, serverUrl: server.url });
@@ -139,7 +150,7 @@ async function main(argv: string[]): Promise<number> {
     case 'report': {
       if (!positionals.length) throw new Error('report needs at least one run file');
       const runs = await Promise.all(positionals.map(readRun));
-      const out = values.out ?? positionals[0].replace(/\.json$/, values.markdown ? '.md' : '.html');
+      const out = values.out ?? sibling(positionals[0], values.markdown ? '.md' : '.html');
       await writeFile(out, values.markdown ? renderMarkdown(runs) : renderReport(runs, { title: values.title }));
       console.error(`report: ${out}`);
       return 0;
@@ -153,8 +164,8 @@ async function main(argv: string[]): Promise<number> {
       if (!positionals[1] && pair?.length !== 2) throw new Error('with a single run, pass --browsers before:after');
       const diff = diffRuns(before, after, {
         browsers: pair?.length === 2 ? { before: pair[0], after: pair[1] } : undefined,
-        scoreThreshold: values['score-threshold'] ? Number(values['score-threshold']) : undefined,
-        latencyRatio: values['latency-ratio'] ? Number(values['latency-ratio']) : undefined,
+        scoreThreshold: numeric('score-threshold', values['score-threshold'], 0),
+        latencyRatio: numeric('latency-ratio', values['latency-ratio'], 1),
       });
       process.stdout.write(renderDiffMarkdown(diff) + '\n');
       if (values.out) {
@@ -172,7 +183,7 @@ async function main(argv: string[]): Promise<number> {
       const run = await rescoreRun(await readRun(file), config);
       const out = values.out ?? file;
       await writeFile(out, JSON.stringify(run, null, 2));
-      await writeFile(out.replace(/\.json$/, '.html'), renderReport([run]));
+      await writeFile(sibling(out, '.html'), renderReport([run]));
       console.error(`rescored: ${out}`);
       return 0;
     }
@@ -182,8 +193,8 @@ async function main(argv: string[]): Promise<number> {
       const res = await runNightly(config, {
         historyDir: values.history,
         diff: {
-          scoreThreshold: values['score-threshold'] ? Number(values['score-threshold']) : undefined,
-          latencyRatio: values['latency-ratio'] ? Number(values['latency-ratio']) : undefined,
+          scoreThreshold: numeric('score-threshold', values['score-threshold'], 0),
+          latencyRatio: numeric('latency-ratio', values['latency-ratio'], 1),
         },
       });
       process.stdout.write(res.markdown + '\n');
@@ -195,7 +206,7 @@ async function main(argv: string[]): Promise<number> {
     }
 
     case 'serve': {
-      const server = await startRuntimeServer(values.port ? Number(values.port) : 47831);
+      const server = await startRuntimeServer(numeric('port', values.port, 0) ?? DEFAULT_PORT);
       console.error(`page runtime at ${server.url} (Ctrl+C to stop)`);
       await new Promise(() => {});
       return 0;

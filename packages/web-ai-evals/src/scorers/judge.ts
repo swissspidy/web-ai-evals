@@ -10,8 +10,19 @@ export interface JudgeOptions {
   baseUrl?: string;
   /** Grading rubric. The judge answers with a 1–5 score, normalized to 0..1. */
   rubric?: string;
+  /**
+   * Output token limit. Default 4096 for Anthropic, 200 otherwise. On Claude models that
+   * think before answering, thinking counts toward it.
+   */
   maxTokens?: number;
+  /**
+   * Anthropic only: `output_config.effort`. Defaults to 'low' with the default model, which
+   * is plenty for grading; unset for other models, since older ones reject the parameter.
+   */
+  effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 }
+
+const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-5-5';
 
 const DEFAULT_RUBRIC = `Rate the RESPONSE to the TASK on a 1-5 scale:
 5 = fully correct, complete and faithful; 4 = minor issues; 3 = partially correct;
@@ -24,7 +35,7 @@ If a REFERENCE is given, use it as a guide to correctness, not as the only accep
  */
 export function llmJudge(opts: JudgeOptions = {}): Scorer {
   const provider = opts.provider ?? 'anthropic';
-  const model = opts.model ?? (provider === 'anthropic' ? 'claude-haiku-4-5-20251001' : 'gpt-4.1-mini');
+  const model = opts.model ?? (provider === 'anthropic' ? DEFAULT_ANTHROPIC_MODEL : 'gpt-4.1-mini');
   const keyEnv = opts.apiKeyEnv ?? (provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY');
   return {
     name: opts.name ?? 'judge',
@@ -50,15 +61,34 @@ export function llmJudge(opts: JudgeOptions = {}): Scorer {
   };
 }
 
+/** Request body for the Anthropic Messages API (exported for tests). */
+export function anthropicBody(model: string, prompt: string, opts: JudgeOptions): Record<string, unknown> {
+  const effort = opts.effort ?? (model === DEFAULT_ANTHROPIC_MODEL ? 'low' : undefined);
+  return {
+    model,
+    // The default model thinks before it answers and thinking counts toward max_tokens, so
+    // leave room for it: a limit sized for the JSON verdict alone can be spent before any text.
+    max_tokens: opts.maxTokens ?? 4096,
+    ...(effort ? { output_config: { effort } } : {}),
+    messages: [{ role: 'user', content: prompt }],
+  };
+}
+
 async function callAnthropic(key: string, model: string, prompt: string, opts: JudgeOptions): Promise<string> {
   const res = await fetch(`${opts.baseUrl ?? 'https://api.anthropic.com'}/v1/messages`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model, max_tokens: opts.maxTokens ?? 200, messages: [{ role: 'user', content: prompt }] }),
+    body: JSON.stringify(anthropicBody(model, prompt, opts)),
   });
   if (!res.ok) throw new Error(`llmJudge: Anthropic API ${res.status} ${await res.text()}`);
-  const body = (await res.json()) as { content: { type: string; text?: string }[] };
-  return body.content.map((c) => c.text ?? '').join('');
+  const body = (await res.json()) as { content: { type: string; text?: string }[]; stop_reason?: string };
+  const text = body.content.map((c) => (c.type === 'text' ? (c.text ?? '') : '')).join('');
+  // Say why there is no score instead of failing to parse one from an empty or cut-off answer.
+  if (body.stop_reason === 'refusal') throw new Error('llmJudge: the judge model declined to grade this example');
+  if (body.stop_reason === 'max_tokens' && !/"score"/.test(text)) {
+    throw new Error('llmJudge: the judge ran out of output tokens before giving a score; raise maxTokens');
+  }
+  return text;
 }
 
 async function callOpenAI(key: string, model: string, prompt: string, opts: JudgeOptions): Promise<string> {

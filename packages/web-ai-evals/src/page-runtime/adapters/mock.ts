@@ -34,6 +34,12 @@ export const mockAdapter: BackendAdapter = {
         if (spec.options?.hangOn && (spec.options.hangOn as string[]).includes(request.exampleId)) {
           await sleep(1e9, rctx.signal);
         }
+        if (spec.options?.stopOn && (spec.options.stopOn as string[]).includes(request.exampleId)) {
+          // Like a real runtime whose generation is interrupted: resolve with partial output on abort.
+          rctx.onChunk('partial ');
+          await sleep(1e9, rctx.signal).catch(() => {});
+          return { output: 'partial ' };
+        }
         const { input } = request;
         let output: string;
         if (request.task.type === 'classify') {

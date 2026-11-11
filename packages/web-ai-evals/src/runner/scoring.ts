@@ -46,12 +46,12 @@ export function summarize(
   const scores: Record<string, number> = {};
   const aggregates: Record<string, number> = {};
   if (attempted.length) {
+    // Aggregate over the first repeat so multiple repeats do not skew label counts.
+    const firstRepeat = attempted.filter((r) => r.repeat === 1);
     for (const scorer of scorers) {
       const values = attempted.map((r) => r.scores[scorer.name] ?? 0);
       scores[scorer.name] = mean(values);
       if (scorer.aggregate) {
-        // Aggregate over the first repeat so multiple repeats do not skew label counts.
-        const firstRepeat = attempted.filter((r) => r.repeat === 1);
         const items = firstRepeat.flatMap((r) => {
           const example = examples.get(r.exampleId);
           if (!example) return [];
