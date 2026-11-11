@@ -41,7 +41,8 @@ interface ProviderResponse {
 }
 
 interface SharedSession {
-  session: Promise<BrowserSession>;
+  /** Undefined after a failed launch: the next call tries again. */
+  session?: Promise<BrowserSession>;
   queue: Promise<unknown>;
   loadedKey?: string;
   idle?: NodeJS.Timeout;
@@ -115,7 +116,8 @@ export default class WebAIEvalsProvider {
   private async runSerialized(shared: SharedSession, prompt: string): Promise<ProviderResponse> {
     let session: BrowserSession;
     try {
-      session = await shared.session;
+      // Calls are serialized, so a call queued behind a failed launch retries it here, one at a time.
+      session = await (shared.session ??= this.open());
       // The browser died (crash, closed window) since the last call: relaunch it once, so one
       // crash does not fail every remaining test.
       if (!session.alive) {
@@ -125,7 +127,8 @@ export default class WebAIEvalsProvider {
         session = await shared.session;
       }
     } catch (err) {
-      if (sessions.get(this.sessionKey) === shared) sessions.delete(this.sessionKey);
+      shared.session = undefined;
+      shared.loadedKey = undefined;
       return { error: `could not launch ${this.browser.id}: ${(err as Error).message.split('\n')[0]}` };
     }
     const key = JSON.stringify([this.spec, this.task]);
@@ -173,7 +176,7 @@ async function closeSession(id: string): Promise<void> {
   const s = sessions.get(id);
   if (!s || s.users > 0) return;
   sessions.delete(id);
-  await (await s.session.catch(() => undefined))?.close();
+  await (await s.session?.catch(() => undefined))?.close();
 }
 
 /** Close every browser opened by the provider (for programmatic use). */

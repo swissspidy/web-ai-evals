@@ -79,3 +79,15 @@ describe('review fixes', () => {
     expect(agg.macroF1).toBe(1);
   });
 });
+
+describe('llmJudge request', () => {
+  it('leaves the default model room to think and asks for low effort; other models get no effort', async () => {
+    const { anthropicBody } = await import('web-ai-evals/scorers');
+    expect(anthropicBody('claude-sonnet-5-5', 'p', {})).toMatchObject({ max_tokens: 4096, output_config: { effort: 'low' } });
+    expect(anthropicBody('claude-haiku-4-5', 'p', { maxTokens: 300 })).toEqual({
+      model: 'claude-haiku-4-5',
+      max_tokens: 300,
+      messages: [{ role: 'user', content: 'p' }],
+    });
+  });
+});
