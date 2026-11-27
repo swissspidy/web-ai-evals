@@ -1,6 +1,6 @@
 {
   "name": "web-ai-evals",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Run and compare LLM evals inside real browsers: Chrome and Edge built-in AI, WebLLM and Transformers.js",
   "keywords": [
     "llm",
